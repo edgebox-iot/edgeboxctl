@@ -1,12 +1,12 @@
-# main.go
 package main
+
 import (
     "fmt"
     "github.com/go-redis/redis/v8"
 )
 
 func main() {
-	
+
 	fmt.Println("Hello World")
 	
 	client := redis.NewClient(&redis.Options{
