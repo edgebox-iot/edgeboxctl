@@ -1,0 +1,8 @@
+version: "3"
+services:
+  go-docker-image:
+    build: ./
+    volumes:
+      - ./:/app
+  edgebox-queue:
+    image: redis-alpine
