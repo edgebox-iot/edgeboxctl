@@ -136,15 +136,15 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/edgebox-iot/repo.svg?style=flat-square
-[contributors-url]: https://github.com/edgebox-iot/repo/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/edgebox-iot/repo.svg?style=flat-square
-[forks-url]: https://github.com/edgebox-iot/repo/network/members
-[stars-shield]: https://img.shields.io/github/stars/edgebox-iot/repo.svg?style=flat-square
-[stars-url]: https://github.com/edgebox-iot/repo/stargazers
-[issues-shield]: https://img.shields.io/github/issues/edgebox-iot/repo.svg?style=flat-square
-[issues-url]: https://github.com/edgebox-iot/repo/issues
-[license-shield]: https://img.shields.io/github/license/edgebox-iot/repo.svg?style=flat-square
-[license-url]: https://github.com/edgebox-iot/repo/blob/master/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/edgebox-iot/sysctl.svg?style=flat-square
+[contributors-url]: https://github.com/edgebox-iot/sysctl/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/edgebox-iot/sysctl.svg?style=flat-square
+[forks-url]: https://github.com/edgebox-iot/sysctl/network/members
+[stars-shield]: https://img.shields.io/github/stars/edgebox-iot/sysctl.svg?style=flat-square
+[stars-url]: https://github.com/edgebox-iot/sysctl/stargazers
+[issues-shield]: https://img.shields.io/github/issues/edgebox-iot/sysctl.svg?style=flat-square
+[issues-url]: https://github.com/edgebox-iot/sysctl/issues
+[license-shield]: https://img.shields.io/github/license/edgebox-iot/sysctl.svg?style=flat-square
+[license-url]: https://github.com/edgebox-iot/sysctl/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/edgebox-iot
