@@ -14,7 +14,7 @@ build:
 		-trimpath -ldflags "-s -w -X ${PROJECT}/internal/diagnostics.Version=${RELEASE} \
 		-X ${PROJECT}/internal/diagnostics.Commit=${COMMIT} \
 		-X ${PROJECT}/internal/diagnostics.BuildDate=${BUILD_DATE}" \
-		-o bin/sysctl-${GOOS}-${GOARCH} ${PROJECT}
+		-o bin/sysctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/sysctl
 
 clean:
 	rm -rf ${BUILD_DIR} ${DIST_DIR}
