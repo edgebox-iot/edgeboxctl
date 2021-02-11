@@ -4,5 +4,3 @@ services:
     build: ./
     volumes:
       - ./:/app
-  edgebox-queue:
-    image: redis-alpine
