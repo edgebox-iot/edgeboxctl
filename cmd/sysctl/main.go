@@ -63,7 +63,7 @@ func appCleanup() {
 }
 
 func printVersion() {
-	log.Printf(
+	fmt.Printf(
 		"version: %s\ncommit: %s\nbuild time: %s",
 		diagnostics.Version, diagnostics.Commit, diagnostics.BuildDate,
 	)
