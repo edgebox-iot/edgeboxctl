@@ -17,5 +17,5 @@ build:
 		-o bin/sysctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/sysctl
 
 clean:
-	rm -rf ${BUILD_DIR} ${DIST_DIR}
+	rm -rf ${BUILD_DIR}
 	go clean
