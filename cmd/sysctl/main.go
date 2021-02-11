@@ -8,7 +8,7 @@ import (
 	"time"
 	//"syscall"
 	"github.com/edgebox-iot/sysctl/internal/diagnostics"
-
+	"fmt"
 )
 
 func main() {
