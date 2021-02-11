@@ -7,15 +7,23 @@ import (
 	"os/signal"
 	"time"
 	//"syscall"
+	"github.com/edgebox-iot/sysctl/internal/diagnostics"
+
 )
 
 func main() {
 
 	// load command line arguments
 
+	version := flag.Bool("version", false, "Get the version info")
 	name := flag.String("name", "edgebox", "name for the service")
 
 	flag.Parse()
+
+	if *version {
+		printVersion()
+		os.Exit(0)
+	} 
 
 	log.Printf("Starting Sysctl service for %s", *name)
 
@@ -32,7 +40,7 @@ func main() {
 	go func() {
 		s := <-sigs
 		log.Printf("RECEIVED SIGNAL: %s", s)
-		AppCleanup()
+		appCleanup()
 		os.Exit(1)
 	}()
 
@@ -50,6 +58,13 @@ func main() {
 }
 
 // AppCleanup : cleanup app state before exit
-func AppCleanup() {
+func appCleanup() {
 	log.Println("Cleaning up app status before exit")
+}
+
+func printVersion() {
+	log.Printf(
+		"version: %s\ncommit: %s\nbuild time: %s",
+		diagnostics.Version, diagnostics.Commit, diagnostics.BuildDate,
+	)
 }
