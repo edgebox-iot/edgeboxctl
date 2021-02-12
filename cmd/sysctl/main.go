@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
+	"syscall"
 
 	"github.com/edgebox-iot/sysctl/internal/diagnostics"
 )
@@ -31,7 +32,7 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 
 	// catch all signals since not explicitly listing
-	signal.Notify(sigs)
+	signal.Notify(sigs, syscall.SIGQUIT)
 
 	// Cathing specific signals can be done with:
 	//signal.Notify(sigs,syscall.SIGQUIT)
