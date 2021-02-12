@@ -47,8 +47,7 @@ func main() {
 	// infinite loop
 	for {
 
-		log.Printf("Executing instruction %s", *name)
-		systemIterator()
+		systemIterator(name)
 
 	}
 
@@ -78,15 +77,13 @@ func isDatabaseReady() bool {
 }
 
 // getNextInstruction : Retrieves next instruction from the database
-func getNextInstruction() string {
+func getNextInstruction(name *string) string {
+	log.Printf("Fetching next instruction for %s", *name)
 	return "Test Instruction Command"
 }
 
-func executeInstruction(string) string {
+func systemIterator(name *string) {
 
-}
-
-func systemIterator() {
 	if !isSystemReady() {
 		// Wait about 60 seconds before trying again.
 		log.Printf("System not ready. Next try will be executed in 60 seconds")
@@ -95,6 +92,7 @@ func systemIterator() {
 		// Wait about 1 second before resumming operations.
 		log.Printf("Next instruction will be executed 1 second")
 		time.Sleep(time.Millisecond * time.Duration(1000))
-
+		log.Printf("Next instruction: %s", getNextInstruction(name))
 	}
+
 }
