@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"time"
-	//"syscall"
+
 	"github.com/edgebox-iot/sysctl/internal/diagnostics"
-	"fmt"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 	if *version {
 		printVersion()
 		os.Exit(0)
-	} 
+	}
 
 	log.Printf("Starting Sysctl service for %s", *name)
 
@@ -48,11 +48,8 @@ func main() {
 	for {
 
 		log.Printf("Executing instruction %s", *name)
+		systemIterator()
 
-		// wait random number of milliseconds
-		Nsecs := 1000
-		log.Printf("Next instruction executed in %dms", Nsecs)
-		time.Sleep(time.Millisecond * time.Duration(Nsecs))
 	}
 
 }
@@ -67,4 +64,37 @@ func printVersion() {
 		"version: %s\ncommit: %s\nbuild time: %s",
 		diagnostics.Version, diagnostics.Commit, diagnostics.BuildDate,
 	)
+}
+
+// IsSystemReady : Checks hability of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
+func isSystemReady() bool {
+	_, err := os.Stat("/home/system/components/ws")
+	return !os.IsNotExist(err)
+}
+
+// IsDatabaseReady : Checks is it can successfully connect to the task queue db
+func isDatabaseReady() bool {
+	return false
+}
+
+// getNextInstruction : Retrieves next instruction from the database
+func getNextInstruction() string {
+	return "Test Instruction Command"
+}
+
+func executeInstruction(string) string {
+
+}
+
+func systemIterator() {
+	if !isSystemReady() {
+		// Wait about 60 seconds before trying again.
+		log.Printf("System not ready. Next try will be executed in 60 seconds")
+		time.Sleep(time.Millisecond * time.Duration(60000))
+	} else {
+		// Wait about 1 second before resumming operations.
+		log.Printf("Next instruction will be executed 1 second")
+		time.Sleep(time.Millisecond * time.Duration(1000))
+
+	}
 }
