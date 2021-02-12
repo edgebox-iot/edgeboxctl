@@ -15,6 +15,7 @@ build:
 		-X ${PROJECT}/internal/diagnostics.Commit=${COMMIT} \
 		-X ${PROJECT}/internal/diagnostics.BuildDate=${BUILD_DATE}" \
 		-o bin/sysctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/sysctl
+	cp ./bin/sysctl-${GOOS}-${GOARCH} ./bin/sysctl
 
 clean:
 	rm -rf ${BUILD_DIR}
