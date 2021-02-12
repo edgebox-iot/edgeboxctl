@@ -7,6 +7,7 @@ BUILD_DIR = bin
 
 build-all:
 	GOOS=linux GOARCH=amd64 make build
+	GOOS=linux GOARCH=arm make build
 
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
