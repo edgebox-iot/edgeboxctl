@@ -56,8 +56,8 @@ func main() {
 
 	printDbDetails()
 
-	dbQueryResult := tasks.PerformQuery()
-	log.Printf("Query result: %s", dbQueryResult)
+	nextTask := tasks.GetNextTask()
+	log.Printf("Query result: Task: %s / Args: %s", nextTask.Task, nextTask.Args)
 
 	// infinite loop
 	for {
@@ -98,15 +98,9 @@ func isDatabaseReady() bool {
 	return false
 }
 
-// getNextInstruction : Retrieves next instruction from the database
-func getNextInstruction(name *string) string {
-	log.Printf("Fetching next instruction for %s", *name)
-	return "Test Instruction Command"
-}
-
 func systemIterator(name *string) {
 
-	if !isSystemReady() {
+	if isSystemReady() {
 		// Wait about 60 seconds before trying again.
 		log.Printf("System not ready. Next try will be executed in 60 seconds")
 		time.Sleep(time.Millisecond * time.Duration(60000))
@@ -114,7 +108,9 @@ func systemIterator(name *string) {
 		// Wait about 1 second before resumming operations.
 		log.Printf("Next instruction will be executed 1 second")
 		time.Sleep(time.Millisecond * time.Duration(1000))
-		log.Printf("Next instruction: %s", getNextInstruction(name))
+		task := tasks.GetNextTask()
+		log.Printf("Next instruction: %s(%s)", task.Task, task.Args)
+
 	}
 
 }
