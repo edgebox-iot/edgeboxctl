@@ -1,14 +1,21 @@
-package database
+package tasks
 
 import (
 	"database/sql"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 )
 
+// Dbhost : Database host (can be tweaked in makefile)
 var Dbhost string
+
+// Dbname : Database name (can be tweaked in makefile)
 var Dbname string
+
+// Dbuser : Database user (can be tweaked in makefile)
 var Dbuser string
+
+// Dbpass : Database password (can be tweaked in)
 var Dbpass string
 
 // PerformQuery : Performs a MySQL query over the device's Edgebox API

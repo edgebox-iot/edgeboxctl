@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/edgebox-iot/sysctl/internal/database"
 	"github.com/edgebox-iot/sysctl/internal/diagnostics"
+	"github.com/edgebox-iot/sysctl/internal/tasks"
 )
 
 func main() {
@@ -18,12 +18,18 @@ func main() {
 	// load command line arguments
 
 	version := flag.Bool("version", false, "Get the version info")
-	name := flag.String("name", "edgebox", "name for the service")
+	db := flag.Bool("database", false, "Get database connection info")
+	name := flag.String("name", "edgebox", "Name for the service")
 
 	flag.Parse()
 
 	if *version {
 		printVersion()
+		os.Exit(0)
+	}
+
+	if *db {
+		printDbDetails()
 		os.Exit(0)
 	}
 
@@ -47,8 +53,10 @@ func main() {
 	}()
 
 	printVersion()
+
 	printDbDetails()
-	dbQueryResult := database.PerformQuery()
+
+	dbQueryResult := tasks.PerformQuery()
 	log.Printf("Query result: %s", dbQueryResult)
 
 	// infinite loop
@@ -75,7 +83,7 @@ func printVersion() {
 func printDbDetails() {
 	fmt.Printf(
 		"\n\nDatabase Connection Information:\nHost: %s\nuser: %s\npassword: %s\n\n",
-		database.Dbhost, database.Dbuser, database.Dbpass,
+		tasks.Dbhost, tasks.Dbuser, tasks.Dbpass,
 	)
 }
 

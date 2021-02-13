@@ -20,13 +20,13 @@ build:
 		-trimpath -ldflags "-s -w -X ${PROJECT}/internal/diagnostics.Version=${RELEASE} \
 		-X ${PROJECT}/internal/diagnostics.Commit=${COMMIT} \
 		-X ${PROJECT}/internal/diagnostics.BuildDate=${BUILD_DATE} \
-		-X ${PROJECT}/internal/database.Version=${RELEASE} \
-		-X ${PROJECT}/internal/database.Commit=${COMMIT} \
-		-X ${PROJECT}/internal/database.BuildDate=${BUILD_DATE} \
-		-X ${PROJECT}/internal/database.Dbhost=${DBHOST} \
-		-X ${PROJECT}/internal/database.Dbname=${DBNAME} \
-		-X ${PROJECT}/internal/database.Dbuser=${DBUSER} \
-		-X ${PROJECT}/internal/database.Dbpass=${DBPASS}" \
+		-X ${PROJECT}/internal/tasks.Version=${RELEASE} \
+		-X ${PROJECT}/internal/tasks.Commit=${COMMIT} \
+		-X ${PROJECT}/internal/tasks.BuildDate=${BUILD_DATE} \
+		-X ${PROJECT}/internal/tasks.Dbhost=${DBHOST} \
+		-X ${PROJECT}/internal/tasks.Dbname=${DBNAME} \
+		-X ${PROJECT}/internal/tasks.Dbuser=${DBUSER} \
+		-X ${PROJECT}/internal/tasks.Dbpass=${DBPASS}" \
 		-o bin/sysctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/sysctl
 	cp ./bin/sysctl-${GOOS}-${GOARCH} ./bin/sysctl
 
