@@ -6,9 +6,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"time"
 	"syscall"
+	"time"
 
+	"github.com/edgebox-iot/sysctl/internal/database"
 	"github.com/edgebox-iot/sysctl/internal/diagnostics"
 )
 
@@ -45,6 +46,11 @@ func main() {
 		os.Exit(1)
 	}()
 
+	printVersion()
+	printDbDetails()
+	dbQueryResult := database.PerformQuery()
+	log.Printf("Query result: %s", dbQueryResult)
+
 	// infinite loop
 	for {
 
@@ -61,8 +67,15 @@ func appCleanup() {
 
 func printVersion() {
 	fmt.Printf(
-		"version: %s\ncommit: %s\nbuild time: %s",
+		"\nversion: %s\ncommit: %s\nbuild time: %s\n",
 		diagnostics.Version, diagnostics.Commit, diagnostics.BuildDate,
+	)
+}
+
+func printDbDetails() {
+	fmt.Printf(
+		"\n\nDatabase Connection Information:\nHost: %s\nuser: %s\npassword: %s\n\n",
+		database.Dbhost, database.Dbuser, database.Dbpass,
 	)
 }
 
