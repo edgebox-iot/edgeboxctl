@@ -2,6 +2,8 @@ package tasks
 
 import (
 	"database/sql"
+	"fmt"
+	"strconv"
 
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 )
@@ -69,14 +71,52 @@ func GetNextTask() Task {
 
 }
 
-func updateTaskStatus(taskID *string, newStatus *int) {
+// ExecuteTask : Performs execution of the given task, updating the task status as it goes, and publishing the task result
+func ExecuteTask(task Task) Task {
 
-}
+	db, err := sql.Open("mysql", Dbuser+":"+Dbpass+"@tcp("+Dbhost+")/"+Dbname)
 
-func executeTask(task *Task) {
+	if err != nil {
+		panic(err.Error())
+	}
 
-}
+	defer db.Close()
 
-func publishTaskResult(taskID *string, result *string) {
+	statusUpdate, err := db.Query("UPDATE tasks SET status = 1 WHERE ID = " + strconv.Itoa(task.ID))
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	for statusUpdate.Next() {
+
+	}
+
+	switch task.Task {
+	case "setup_bootnode":
+		fmt.Println("Setting up bootnode connection...")
+		// ...
+		task.Result = sql.NullString{String: "{status: 'success'}", Valid: true}
+	case "start_edgeapp":
+		fmt.Println("Starting EdgeApp...")
+		// ...
+	case "stop_edgeapp":
+		fmt.Println("Stopping EdgeApp...")
+		// ...
+	}
+
+	if task.Result.Valid {
+		db.Query("Update tasks SET status = 2, result = '" + task.Result.String + "' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+	} else {
+		db.Query("Update tasks SET status = 2, result = 'Invalid Task' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+	}
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	returnTask := task
+
+	return returnTask
 
 }

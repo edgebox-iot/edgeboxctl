@@ -13,6 +13,9 @@ import (
 	"github.com/edgebox-iot/sysctl/internal/tasks"
 )
 
+const defaultNotReadySleepTime time.Duration = time.Second * 60
+const defaultSleepTime time.Duration = time.Second
+
 func main() {
 
 	// load command line arguments
@@ -55,9 +58,6 @@ func main() {
 	printVersion()
 
 	printDbDetails()
-
-	nextTask := tasks.GetNextTask()
-	log.Printf("Query result: Task: %s / Args: %s", nextTask.Task, nextTask.Args)
 
 	// infinite loop
 	for {
@@ -103,13 +103,18 @@ func systemIterator(name *string) {
 	if isSystemReady() {
 		// Wait about 60 seconds before trying again.
 		log.Printf("System not ready. Next try will be executed in 60 seconds")
-		time.Sleep(time.Millisecond * time.Duration(60000))
+		time.Sleep(defaultNotReadySleepTime)
 	} else {
 		// Wait about 1 second before resumming operations.
 		log.Printf("Next instruction will be executed 1 second")
-		time.Sleep(time.Millisecond * time.Duration(1000))
-		task := tasks.GetNextTask()
-		log.Printf("Next instruction: %s(%s)", task.Task, task.Args)
+		time.Sleep(defaultSleepTime)
+		nextTask := tasks.GetNextTask()
+		if nextTask.Task != "" {
+			log.Printf("Executing task %s / Args: %s", nextTask.Task, nextTask.Args)
+			tasks.ExecuteTask(nextTask)
+		} else {
+			log.Printf("No tasks to execute.")
+		}
 
 	}
 
