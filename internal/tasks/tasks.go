@@ -46,6 +46,7 @@ type taskSetupBootnodeArgs struct {
 	BootnodeAddress string `json:"bootnode_address"`
 	BootnodeToken   string `json:"bootnode_token"`
 	AssignedAddress string `json:"assigned_address"`
+	NodeName        string `json:"node_name"`
 }
 
 // GetNextTask : Performs a MySQL query over the device's Edgebox API
@@ -155,7 +156,7 @@ func ExecuteTask(task Task) Task {
 
 func taskSetupBootnode(args taskSetupBootnodeArgs) string {
 
-	out, err := exec.Command("tinc-boot", "gen", "--token "+args.BootnodeToken, args.BootnodeAddress+":8655", "--prefix "+args.AssignedAddress).Output()
+	out, err := exec.Command("tinc-boot", "gen", "--name "+args.NodeName, "--token "+args.BootnodeToken, args.BootnodeAddress+":8655", "--prefix "+args.AssignedAddress).Output()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
