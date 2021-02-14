@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -43,7 +44,7 @@ type Task struct {
 	Updated string         `json:"updated"`
 }
 
-type taskSetupBootnodeArgs struct {
+type taskSetupTunnelArgs struct {
 	BootnodeAddress string `json:"bootnode_address"`
 	BootnodeToken   string `json:"bootnode_token"`
 	AssignedAddress string `json:"assigned_address"`
@@ -114,16 +115,17 @@ func ExecuteTask(task Task) Task {
 	if Version == "dev" {
 		log.Printf("Dev environemnt. Not executing tasks.")
 	} else {
+		log.Println("Task: " + task.Task)
 		switch task.Task {
-		case "setup_bootnode":
+		case "setup_tunnel":
 
 			log.Println("Setting up bootnode connection...")
-			var args taskSetupBootnodeArgs
+			var args taskSetupTunnelArgs
 			err := json.Unmarshal([]byte(task.Args), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of setup_bootnode task: %s", err)
 			} else {
-				taskResult = taskSetupBootnode(args)
+				taskResult := taskSetupTunnel(args)
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
@@ -154,33 +156,35 @@ func ExecuteTask(task Task) Task {
 
 }
 
-// Internal functions, for each task
-
-func taskSetupBootnode(args taskSetupBootnodeArgs) string {
-
-	fmt.Println("Executing taskSetupBootnode")
-
-	out, err := exec.Command("tinc-boot", "gen", "--name "+args.NodeName, "--token "+args.BootnodeToken, args.BootnodeAddress+":8655", "--prefix "+args.AssignedAddress).Output()
+func executeCommand(command string, args []string) string {
+	cmd := exec.Command(command, args...)
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err := cmd.Run()
 	if err != nil {
-		log.Printf("Error: %s", err)
+		log.Println(fmt.Sprint(err) + ": " + stderr.String())
 	}
-	output := string(out[:])
-	fmt.Println(output)
+	log.Println("Result: " + out.String())
+	
+	return out.String()
+}
 
-	out, err = exec.Command("systemctl", "start", "tinc@dnet").Output()
-	if err != nil {
-		log.Printf("Error: %s", err)
-	}
-	output = string(out[:])
-	log.Printf(output)
+func taskSetupTunnel(args taskSetupTunnelArgs) string {
 
-	out, err = exec.Command("systemctl", "enable", "tinc@dnet").Output()
-	if err != nil {
-		log.Printf("Error: %s", err)
-	}
-	output = string(out[:])
-	log.Printf(output)
+	fmt.Println("Executing taskSetupTunnel")
 
+	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress+":8655", "--prefix", args.AssignedAddress}
+	executeCommand("tinc-boot", cmdargs)
+
+	cmdargs = []string{"start", "tinc@dnet"}
+	executeCommand("systemctl", cmdargs)
+
+	cmdargs = []string{"enable", "tinc@dnet"}
+	executeCommand("systemctl", cmdargs)
+
+	output := "OK" // Better check / logging of command execution result.
 	return output
 
 }
