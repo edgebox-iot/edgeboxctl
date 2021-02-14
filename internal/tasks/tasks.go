@@ -2,11 +2,22 @@ package tasks
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strconv"
 
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 )
+
+// Version : The release version
+var Version string
+
+// Commit : The commit of this release
+var Commit string
+
+// BuildDate : The release build date
+var BuildDate string
 
 // Dbhost : Database host (can be tweaked in makefile)
 var Dbhost string
@@ -29,6 +40,12 @@ type Task struct {
 	Result  sql.NullString `json:"result"` // Database fields that can be null must use the sql.NullString type
 	Created string         `json:"created"`
 	Updated string         `json:"updated"`
+}
+
+type taskSetupBootnodeArgs struct {
+	BootnodeAddress string `json:"bootnode_address"`
+	BootnodeToken   string `json:"bootnode_token"`
+	AssignedAddress string `json:"assigned_address"`
 }
 
 // GetNextTask : Performs a MySQL query over the device's Edgebox API
@@ -92,17 +109,30 @@ func ExecuteTask(task Task) Task {
 
 	}
 
-	switch task.Task {
-	case "setup_bootnode":
-		fmt.Println("Setting up bootnode connection...")
-		// ...
-		task.Result = sql.NullString{String: "{status: 'success'}", Valid: true}
-	case "start_edgeapp":
-		fmt.Println("Starting EdgeApp...")
-		// ...
-	case "stop_edgeapp":
-		fmt.Println("Stopping EdgeApp...")
-		// ...
+	if Version == "dev" {
+		fmt.Println("Dev environemnt. Not executing tasks.")
+	} else {
+		switch task.Task {
+		case "setup_bootnode":
+
+			fmt.Println("Setting up bootnode connection...")
+			var args taskSetupBootnodeArgs
+			err := json.Unmarshal([]byte(task.Args), &args)
+			if err != nil {
+				fmt.Println("Error reading arguments of setup_bootnode task: %s", err)
+			} else {
+				task.Result = sql.NullString{String: taskSetupBootnode(args), Valid: true}
+			}
+
+		case "start_edgeapp":
+			fmt.Println("Starting EdgeApp...")
+			task.Result = sql.NullString{String: taskStartEdgeApp(), Valid: true}
+			// ...
+		case "stop_edgeapp":
+			fmt.Println("Stopping EdgeApp...")
+			task.Result = sql.NullString{String: taskStopEdgeApp(), Valid: true}
+			// ...
+		}
 	}
 
 	if task.Result.Valid {
@@ -119,4 +149,43 @@ func ExecuteTask(task Task) Task {
 
 	return returnTask
 
+}
+
+// Internal functions, for each task
+
+func taskSetupBootnode(args taskSetupBootnodeArgs) string {
+
+	out, err := exec.Command("tinc-boot", "gen", "--token "+args.BootnodeToken, args.BootnodeAddress+":8655", "--prefix "+args.AssignedAddress).Output()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	output := string(out[:])
+	fmt.Println(output)
+
+	out, err = exec.Command("systemctl", "start", "tinc@dnet").Output()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	output = string(out[:])
+	fmt.Println(output)
+
+	out, err = exec.Command("systemctl", "enable", "tinc@dnet").Output()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	output = string(out[:])
+	fmt.Println(output)
+
+	return output
+
+}
+
+func taskStartEdgeApp() string {
+
+	return "OK"
+}
+
+func taskStopEdgeApp() string {
+
+	return "OK"
 }
