@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os/exec"
 	"strconv"
 
@@ -111,26 +112,27 @@ func ExecuteTask(task Task) Task {
 	}
 
 	if Version == "dev" {
-		fmt.Println("Dev environemnt. Not executing tasks.")
+		log.Printf("Dev environemnt. Not executing tasks.")
 	} else {
 		switch task.Task {
 		case "setup_bootnode":
 
-			fmt.Println("Setting up bootnode connection...")
+			log.Println("Setting up bootnode connection...")
 			var args taskSetupBootnodeArgs
 			err := json.Unmarshal([]byte(task.Args), &args)
 			if err != nil {
-				fmt.Println("Error reading arguments of setup_bootnode task: %s", err)
+				log.Printf("Error reading arguments of setup_bootnode task: %s", err)
 			} else {
-				task.Result = sql.NullString{String: taskSetupBootnode(args), Valid: true}
+				taskResult = taskSetupBootnode(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
 		case "start_edgeapp":
-			fmt.Println("Starting EdgeApp...")
+			log.Printf("Starting EdgeApp...")
 			task.Result = sql.NullString{String: taskStartEdgeApp(), Valid: true}
 			// ...
 		case "stop_edgeapp":
-			fmt.Println("Stopping EdgeApp...")
+			log.Printf("Stopping EdgeApp...")
 			task.Result = sql.NullString{String: taskStopEdgeApp(), Valid: true}
 			// ...
 		}
@@ -156,26 +158,28 @@ func ExecuteTask(task Task) Task {
 
 func taskSetupBootnode(args taskSetupBootnodeArgs) string {
 
+	fmt.Println("Executing taskSetupBootnode")
+
 	out, err := exec.Command("tinc-boot", "gen", "--name "+args.NodeName, "--token "+args.BootnodeToken, args.BootnodeAddress+":8655", "--prefix "+args.AssignedAddress).Output()
 	if err != nil {
-		fmt.Printf("%s", err)
+		log.Printf("Error: %s", err)
 	}
 	output := string(out[:])
 	fmt.Println(output)
 
 	out, err = exec.Command("systemctl", "start", "tinc@dnet").Output()
 	if err != nil {
-		fmt.Printf("%s", err)
+		log.Printf("Error: %s", err)
 	}
 	output = string(out[:])
-	fmt.Println(output)
+	log.Printf(output)
 
 	out, err = exec.Command("systemctl", "enable", "tinc@dnet").Output()
 	if err != nil {
-		fmt.Printf("%s", err)
+		log.Printf("Error: %s", err)
 	}
 	output = string(out[:])
-	fmt.Println(output)
+	log.Printf(output)
 
 	return output
 
