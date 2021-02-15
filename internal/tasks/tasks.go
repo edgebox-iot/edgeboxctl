@@ -167,7 +167,7 @@ func executeCommand(command string, args []string) string {
 		log.Println(fmt.Sprint(err) + ": " + stderr.String())
 	}
 	log.Println("Result: " + out.String())
-	
+
 	return out.String()
 }
 
@@ -175,7 +175,7 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 
 	fmt.Println("Executing taskSetupTunnel")
 
-	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress+":8655", "--prefix", args.AssignedAddress}
+	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress + ":8655", "--prefix", args.AssignedAddress}
 	executeCommand("tinc-boot", cmdargs)
 
 	cmdargs = []string{"start", "tinc@dnet"}
