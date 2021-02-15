@@ -143,7 +143,7 @@ func ExecuteTask(task Task) Task {
 	if task.Result.Valid {
 		db.Query("Update tasks SET status = 2, result = '" + task.Result.String + "' WHERE ID = " + strconv.Itoa(task.ID) + ";")
 	} else {
-		db.Query("Update tasks SET status = 2, result = 'Invalid Task' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+		db.Query("Update tasks SET status = 3, result = 'Error' WHERE ID = " + strconv.Itoa(task.ID) + ";")
 	}
 
 	if err != nil {
@@ -153,6 +153,24 @@ func ExecuteTask(task Task) Task {
 	returnTask := task
 
 	return returnTask
+
+}
+
+// ExecuteSchedules - Run Specific tasks without input each multiple x of ticks.
+func ExecuteSchedules(tick int) {
+
+	if tick%30 == 0 {
+		// Executing every 30 ticks
+		taskGetEdgeApps()
+
+	}
+
+	if tick%60 == 0 {
+		// Every 60 ticks...
+
+	}
+
+	// Just add a schedule here if you need a custom one (every "tick hour", every "tick day", etc...)
 
 }
 
@@ -187,6 +205,21 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 	output := "OK" // Better check / logging of command execution result.
 	return output
 
+}
+
+func taskGetEdgeApps() string {
+
+	fmt.Println("Executing taskGetEdgeApps")
+
+	// Building list of available edgeapps in the system.
+
+	// Querying to see which apps are running.
+	// cmdargs = []string{"ps", "-a"}
+	// executeCommand("docker", cmdargs)
+	// (...)
+
+	// Saving information in the "options" table.
+	return "OK"
 }
 
 func taskStartEdgeApp() string {

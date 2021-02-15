@@ -59,10 +59,13 @@ func main() {
 
 	printDbDetails()
 
+	tick := 0
+
 	// infinite loop
 	for {
 
-		systemIterator(name)
+		tick++ // Tick is an int, so eventually will "go out of ticks?" Maybe we want to reset the ticks every once in a while, to avoid working with big numbers...
+		systemIterator(name, tick)
 
 	}
 
@@ -98,13 +101,16 @@ func isDatabaseReady() bool {
 	return false
 }
 
-func systemIterator(name *string) {
+func systemIterator(name *string, tick int) {
+	
+	log.Printf("Tick is %d", tick)
 
 	if isSystemReady() {
 		// Wait about 60 seconds before trying again.
 		log.Printf("System not ready. Next try will be executed in 60 seconds")
 		time.Sleep(defaultNotReadySleepTime)
 	} else {
+		tasks.ExecuteSchedules(tick)
 		// Wait about 1 second before resumming operations.
 		log.Printf("Next instruction will be executed 1 second")
 		time.Sleep(defaultSleepTime)
