@@ -1,25 +1,16 @@
 package tasks
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os/exec"
 	"strconv"
 
+	"github.com/edgebox-iot/sysctl/internal/diagnostics"
+	"github.com/edgebox-iot/sysctl/internal/utils"
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 )
-
-// Version : The release version
-var Version string
-
-// Commit : The commit of this release
-var Commit string
-
-// BuildDate : The release build date
-var BuildDate string
 
 // Dbhost : Database host (can be tweaked in makefile)
 var Dbhost string
@@ -112,7 +103,7 @@ func ExecuteTask(task Task) Task {
 
 	}
 
-	if Version == "dev" {
+	if diagnostics.Version == "dev" {
 		log.Printf("Dev environemnt. Not executing tasks.")
 	} else {
 		log.Println("Task: " + task.Task)
@@ -159,6 +150,11 @@ func ExecuteTask(task Task) Task {
 // ExecuteSchedules - Run Specific tasks without input each multiple x of ticks.
 func ExecuteSchedules(tick int) {
 
+	if tick == 1 {
+		// Executing on startup (first tick). Schedules run before tasks in the SystemIterator
+		taskGetEdgeApps()
+	}
+
 	if tick%30 == 0 {
 		// Executing every 30 ticks
 		taskGetEdgeApps()
@@ -174,33 +170,18 @@ func ExecuteSchedules(tick int) {
 
 }
 
-func executeCommand(command string, args []string) string {
-	cmd := exec.Command(command, args...)
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		log.Println(fmt.Sprint(err) + ": " + stderr.String())
-	}
-	log.Println("Result: " + out.String())
-
-	return out.String()
-}
-
 func taskSetupTunnel(args taskSetupTunnelArgs) string {
 
 	fmt.Println("Executing taskSetupTunnel")
 
 	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress + ":8655", "--prefix", args.AssignedAddress}
-	executeCommand("tinc-boot", cmdargs)
+	utils.Exec("tinc-boot", cmdargs)
 
 	cmdargs = []string{"start", "tinc@dnet"}
-	executeCommand("systemctl", cmdargs)
+	utils.Exec("systemctl", cmdargs)
 
 	cmdargs = []string{"enable", "tinc@dnet"}
-	executeCommand("systemctl", cmdargs)
+	utils.Exec("systemctl", cmdargs)
 
 	output := "OK" // Better check / logging of command execution result.
 	return output
@@ -210,13 +191,6 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 func taskGetEdgeApps() string {
 
 	fmt.Println("Executing taskGetEdgeApps")
-
-	// Building list of available edgeapps in the system.
-
-	// Querying to see which apps are running.
-	// cmdargs = []string{"ps", "-a"}
-	// executeCommand("docker", cmdargs)
-	// (...)
 
 	// Saving information in the "options" table.
 	return "OK"

@@ -20,9 +20,6 @@ build:
 		-trimpath -ldflags "-s -w -X ${PROJECT}/internal/diagnostics.Version=${RELEASE} \
 		-X ${PROJECT}/internal/diagnostics.Commit=${COMMIT} \
 		-X ${PROJECT}/internal/diagnostics.BuildDate=${BUILD_DATE} \
-		-X ${PROJECT}/internal/tasks.Version=${RELEASE} \
-		-X ${PROJECT}/internal/tasks.Commit=${COMMIT} \
-		-X ${PROJECT}/internal/tasks.BuildDate=${BUILD_DATE} \
 		-X ${PROJECT}/internal/tasks.Dbhost=${DBHOST} \
 		-X ${PROJECT}/internal/tasks.Dbname=${DBNAME} \
 		-X ${PROJECT}/internal/tasks.Dbuser=${DBUSER} \

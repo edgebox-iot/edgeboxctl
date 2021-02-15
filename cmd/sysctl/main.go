@@ -102,7 +102,7 @@ func isDatabaseReady() bool {
 }
 
 func systemIterator(name *string, tick int) {
-	
+
 	log.Printf("Tick is %d", tick)
 
 	if isSystemReady() {
