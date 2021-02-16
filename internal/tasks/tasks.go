@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/edgebox-iot/sysctl/internal/diagnostics"
+	"github.com/edgebox-iot/sysctl/internal/edgeapps"
 	"github.com/edgebox-iot/sysctl/internal/utils"
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 )
@@ -191,6 +192,7 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 func taskGetEdgeApps() string {
 
 	fmt.Println("Executing taskGetEdgeApps")
+	edgeapps.GetEdgeApps()
 
 	// Saving information in the "options" table.
 	return "OK"

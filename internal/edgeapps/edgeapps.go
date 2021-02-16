@@ -5,16 +5,17 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+
+	"gopkg.in/yaml.v2"
 )
 
 // EdgeApp : Struct representing an EdgeApp in the system
 type EdgeApp struct {
-	ID                 string        `json:"id"`
-	Name               string        `json:"name"`
-	Status             EdgeAppStatus `json:"status"`
-	InternetAccessible bool          `json:"internet_accessible"`
-	InternetURL        string        `json:"internet_url"`
-	NetworkURL         string        `json:"network_url"`
+	ID         string           `json:"id"`
+	Name       string           `json:"name"`
+	Status     EdgeAppStatus    `json:"status"`
+	Services   []EdgeAppService `json:"services"`
+	NetworkURL []string         `json:"network_url"`
 }
 
 // EdgeAppStatus : Struct representing possible EdgeApp statuses (code + description)
@@ -23,17 +24,21 @@ type EdgeAppStatus struct {
 	Description string `json:"description"`
 }
 
-// GetEdgeApps : Returns a list of EdgeApp struct filled with information
-func GetEdgeApps() []EdgeApp {
+// EdgeAppService : Struct representing a single container that can be part of an EdgeApp package
+type EdgeAppService struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Isrunning bool   `json:"is_running"`
+}
 
-	var edgeApps []EdgeApp
+// GetEdgeApps : Returns a list of EdgeApp struct filled with information
+func GetEdgeApps() string { // []EdgeApp {
+
+	// var edgeApps []EdgeApp
 
 	// Building list of available edgeapps in the system.
 	configFilename := "edgebox-compose.yml"
-	// envFilename := "edgebox.env"
-	// postinstallFilename := "edgebox-postinstall.txt"
 	edgeAppsPath := "/home/system/components/apps"
-	var edgeAppsList []string
 
 	files, err := ioutil.ReadDir(edgeAppsPath)
 	if err != nil {
@@ -48,7 +53,9 @@ func GetEdgeApps() []EdgeApp {
 			_, err := os.Stat("/home/system/components/apps/" + f.Name() + "/" + configFilename)
 			if !os.IsNotExist(err) {
 				// File exists. Start digging!
-				edgeAppsList = append(edgeAppsList, f.Name())
+				// edgeApp := EdgeApp{ID: f.Name(), Status: GetEdgeAppStatus(f.Name())}
+				// edgeApps = append(edgeApps, edgeApp)
+				GetEdgeAppServices(f.Name())
 			}
 
 		}
@@ -59,6 +66,39 @@ func GetEdgeApps() []EdgeApp {
 	// executeCommand("docker", cmdargs)
 	// (...)
 
-	return edgeApps
+	// return edgeApps
+	return "OK"
+}
+
+// GetEdgeAppStatus : Returns a struct representing the current status of the EdgeApp
+// func GetEdgeAppStatus(ID string) EdgeAppStatus {
+
+// 	// Possible states of an EdgeApp:
+// 	// - All services running = EdgeApp running
+// 	// - Some services running = Problem detected, needs restart
+// 	// - No service running = EdgeApp is off
+
+// 	services := GetEdgeAppServices(ID)
+
+// 	return status
+// }
+
+// GetEdgeAppServices : Returns a
+func GetEdgeAppServices(ID string) string {
+
+	data, err := ioutil.ReadFile("/home/system/components/apps/" + ID + "/edgebox-compose.yml")
+
+	// If this happens it means that no EdgeApp exists for the given ID. This func should not be called in that case.
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Is application running?
+
+	t := make(map[string]interface{})
+	yaml.Unmarshal([]byte(data), &t)
+	fmt.Println(t["services"])
+
+	return "OK"
 
 }
