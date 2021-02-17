@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"os/exec"
 
@@ -18,10 +17,11 @@ func Exec(command string, args []string) string {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		log.Println(fmt.Sprint(err) + ": " + stderr.String())
+		// TODO: Deal with possibility of error in command, allow explicit error handling and return proper formatted stderr
+		// log.Println(fmt.Sprint(err) + ": " + stderr.String()) ... Silence...
 	}
 
-	log.Println("Result: " + out.String())
+	// log.Println("Result: " + out.String()) ... Silence ...
 
 	return out.String()
 

@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/joho/godotenv"
+
 	"github.com/edgebox-iot/sysctl/internal/utils"
 )
 
@@ -31,6 +33,7 @@ type EdgeAppService struct {
 }
 
 const configFilename = "/edgebox-compose.yml"
+const envFilename = "/edgebox.env"
 
 // GetEdgeApps : Returns a list of EdgeApp struct filled with information
 func GetEdgeApps() []EdgeApp {
@@ -51,7 +54,19 @@ func GetEdgeApps() []EdgeApp {
 			_, err := os.Stat(utils.GetPath("edgeAppsPath") + f.Name() + configFilename)
 			if !os.IsNotExist(err) {
 				// File exists. Start digging!
-				edgeAppName := "Nextcloud"
+
+				edgeAppName := f.Name()
+
+				edgeAppEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + f.Name() + envFilename)
+
+				if err != nil {
+					log.Println("Error loading .env file for edgeapp " + f.Name())
+				} else {
+					if edgeAppEnv["EDGEAPP_NAME"] != "" {
+						edgeAppName = edgeAppEnv["EDGEAPP_NAME"]
+					}
+				}
+
 				edgeApp := EdgeApp{ID: f.Name(), Name: edgeAppName, Status: GetEdgeAppStatus(f.Name()), Services: GetEdgeAppServices(f.Name()), NetworkURL: f.Name() + ".edgebox.local"}
 				edgeApps = append(edgeApps, edgeApp)
 			}
@@ -95,10 +110,6 @@ func GetEdgeAppStatus(ID string) EdgeAppStatus {
 // GetEdgeAppServices : Returns a
 func GetEdgeAppServices(ID string) []EdgeAppService {
 
-	log.Println("Finding " + ID + " EdgeApp Services")
-
-	// strConfigFile := string(configFile) // convert content to a 'string'
-
 	cmdArgs := []string{"-r", ".services | keys[]", utils.GetPath("edgeAppsPath") + ID + configFilename}
 	servicesString := utils.Exec("yq", cmdArgs)
 	serviceSlices := strings.Split(servicesString, "\n")
@@ -106,7 +117,6 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 	var edgeAppServices []EdgeAppService
 
 	for _, serviceID := range serviceSlices {
-		log.Println(serviceID)
 		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "ps", "-q", serviceID}
 		cmdResult := utils.Exec("docker-compose", cmdArgs)
 		isRunning := false

@@ -141,12 +141,12 @@ func ExecuteSchedules(tick int) {
 
 	if tick == 1 {
 		// Executing on startup (first tick). Schedules run before tasks in the SystemIterator
-		taskGetEdgeApps()
+		log.Println(taskGetEdgeApps())
 	}
 
 	if tick%30 == 0 {
 		// Executing every 30 ticks
-		taskGetEdgeApps()
+		log.Println(taskGetEdgeApps())
 
 	}
 
@@ -183,28 +183,27 @@ func taskGetEdgeApps() string {
 
 	edgeApps := edgeapps.GetEdgeApps()
 	edgeAppsJSON, _ := json.Marshal(edgeApps)
-	log.Println(string(edgeAppsJSON))
 
-	// db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
+	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
 
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
+	if err != nil {
+		panic(err.Error())
+	}
 
-	// defer db.Close()
+	defer db.Close()
 
-	// statusUpdate, err := db.Query("UPDATE options SET value = '" +  + "' WHERE name = 'EDGEAPPS_LIST'")
+	statusUpdate, err := db.Query("REPLACE into options (name, value) VALUES ('EDGEAPPS_LIST','" + string(edgeAppsJSON) + "');")
 
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
+	if err != nil {
+		panic(err.Error())
+	}
 
-	// for statusUpdate.Next() {
+	for statusUpdate.Next() {
 
-	// }
+	}
 
-	// Saving information in the "options" table.
-	return "OK"
+	return string(edgeAppsJSON)
+
 }
 
 func taskStartEdgeApp() string {
