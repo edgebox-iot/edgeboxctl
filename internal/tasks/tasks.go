@@ -192,7 +192,8 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 func taskGetEdgeApps() string {
 
 	fmt.Println("Executing taskGetEdgeApps")
-	edgeapps.GetEdgeApps()
+
+	log.Println(edgeapps.GetEdgeApps())
 
 	// Saving information in the "options" table.
 	return "OK"

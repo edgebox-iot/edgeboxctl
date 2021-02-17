@@ -18,7 +18,20 @@ func Exec(command string, args []string) string {
 	if err != nil {
 		log.Println(fmt.Sprint(err) + ": " + stderr.String())
 	}
+
 	log.Println("Result: " + out.String())
 
 	return out.String()
+
+}
+
+// DeleteEmptySlices : Given a string array, delete empty entries.
+func DeleteEmptySlices(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
 }
