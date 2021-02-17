@@ -31,8 +31,12 @@ type EdgeAppService struct {
 }
 
 const configFilename = "/edgebox-compose.yml"
-const edgeAppsPath = "/home/system/components/apps/"
-const wsPath = "/home/system/components/ws/"
+
+// const edgeAppsPath = "/home/system/components/apps/"
+const edgeAppsPath = "/home/jpt/Repositories/edgebox/apps/"
+
+// const wsPath = "/home/system/components/ws/"
+const wsPath = "/home/jpt/Repositories/edgebox/ws"
 
 // GetEdgeApps : Returns a list of EdgeApp struct filled with information
 func GetEdgeApps() []EdgeApp {
@@ -53,7 +57,8 @@ func GetEdgeApps() []EdgeApp {
 			_, err := os.Stat(edgeAppsPath + f.Name() + configFilename)
 			if !os.IsNotExist(err) {
 				// File exists. Start digging!
-				edgeApp := EdgeApp{ID: f.Name(), Status: GetEdgeAppStatus(f.Name()), Services: GetEdgeAppServices(f.Name()), NetworkURL: f.Name() + ".edgebox.local"}
+				edgeAppName := "Nextcloud"
+				edgeApp := EdgeApp{ID: f.Name(), Name: edgeAppName, Status: GetEdgeAppStatus(f.Name()), Services: GetEdgeAppServices(f.Name()), NetworkURL: f.Name() + ".edgebox.local"}
 				edgeApps = append(edgeApps, edgeApp)
 			}
 

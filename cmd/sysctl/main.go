@@ -11,6 +11,7 @@ import (
 
 	"github.com/edgebox-iot/sysctl/internal/diagnostics"
 	"github.com/edgebox-iot/sysctl/internal/tasks"
+	"github.com/edgebox-iot/sysctl/internal/utils"
 )
 
 const defaultNotReadySleepTime time.Duration = time.Second * 60
@@ -85,8 +86,8 @@ func printVersion() {
 
 func printDbDetails() {
 	fmt.Printf(
-		"\n\nDatabase Connection Information:\nHost: %s\nuser: %s\npassword: %s\n\n",
-		tasks.Dbhost, tasks.Dbuser, tasks.Dbpass,
+		"\n\nDatabase Connection Information:\n %s\n\n",
+		utils.GetMySQLDbConnectionDetails(),
 	)
 }
 

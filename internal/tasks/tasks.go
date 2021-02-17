@@ -13,18 +13,6 @@ import (
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 )
 
-// Dbhost : Database host (can be tweaked in makefile)
-var Dbhost string
-
-// Dbname : Database name (can be tweaked in makefile)
-var Dbname string
-
-// Dbuser : Database user (can be tweaked in makefile)
-var Dbuser string
-
-// Dbpass : Database password (can be tweaked in)
-var Dbpass string
-
 // Task : Struct for Task type
 type Task struct {
 	ID      int            `json:"id"`
@@ -47,7 +35,7 @@ type taskSetupTunnelArgs struct {
 func GetNextTask() Task {
 
 	// Will try to connect to API database, which should be running locally under WS.
-	db, err := sql.Open("mysql", Dbuser+":"+Dbpass+"@tcp("+Dbhost+")/"+Dbname)
+	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
 
 	// if there is an error opening the connection, handle it
 	if err != nil {
@@ -86,7 +74,7 @@ func GetNextTask() Task {
 // ExecuteTask : Performs execution of the given task, updating the task status as it goes, and publishing the task result
 func ExecuteTask(task Task) Task {
 
-	db, err := sql.Open("mysql", Dbuser+":"+Dbpass+"@tcp("+Dbhost+")/"+Dbname)
+	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
 
 	if err != nil {
 		panic(err.Error())
@@ -193,7 +181,27 @@ func taskGetEdgeApps() string {
 
 	fmt.Println("Executing taskGetEdgeApps")
 
-	log.Println(edgeapps.GetEdgeApps())
+	edgeApps := edgeapps.GetEdgeApps()
+	edgeAppsJSON, _ := json.Marshal(edgeApps)
+	log.Println(string(edgeAppsJSON))
+
+	// db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
+
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+
+	// defer db.Close()
+
+	// statusUpdate, err := db.Query("UPDATE options SET value = '" +  + "' WHERE name = 'EDGEAPPS_LIST'")
+
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+
+	// for statusUpdate.Next() {
+
+	// }
 
 	// Saving information in the "options" table.
 	return "OK"
