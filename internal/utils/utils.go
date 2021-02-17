@@ -41,11 +41,8 @@ func DeleteEmptySlices(s []string) []string {
 // GetMySQLDbConnectionDetails : Returns the necessary string as connection info for SQL.db()
 func GetMySQLDbConnectionDetails() string {
 
-	// const apiEnvFileLocation = "/home/system/components/api/edgebox.env"
-	const apiEnvFileLocation = "/home/jpt/Repositories/edgebox/api/edgebox.env"
-
 	var apiEnv map[string]string
-	apiEnv, err := godotenv.Read(apiEnvFileLocation)
+	apiEnv, err := godotenv.Read(GetPath("apiEnvFileLocation"))
 
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -57,5 +54,52 @@ func GetMySQLDbConnectionDetails() string {
 	Dbpass := apiEnv["MYSQL_PASSWORD"]
 
 	return Dbuser + ":" + Dbpass + "@tcp(" + Dbhost + ")/" + Dbname
+
+}
+
+// GetPath : Returns either the hardcoded path, or a overwritten value via .env file at project root. Register paths here for seamless working code between dev and prod environments ;)
+func GetPath(pathKey string) string {
+
+	// Read whole of .env file to map.
+	var env map[string]string
+	env, err := godotenv.Read()
+	targetPath := ""
+
+	if err != nil {
+		log.Println("Project .env file not found withing project root. Using only hardcoded path variables.")
+	}
+
+	switch pathKey {
+	case "apiEnvFileLocation":
+
+		if env["API_ENV_FILE_LOCATION"] != "" {
+			targetPath = env["API_ENV_FILE_LOCATION"]
+		} else {
+			targetPath = "/home/system/components/api/edgebox.env"
+		}
+
+	case "edgeAppsPath":
+
+		if env["EDGEAPPS_PATH"] != "" {
+			targetPath = env["EDGEAPPS_PATH"]
+		} else {
+			targetPath = "/home/system/components/apps/"
+		}
+
+	case "wsPath":
+
+		if env["WS_PATH"] != "" {
+			targetPath = env["WS_PATH"]
+		} else {
+			targetPath = "/home/system/components/ws/"
+		}
+
+	default:
+
+		log.Printf("path_key %s nonexistant in GetPath().\n", pathKey)
+
+	}
+
+	return targetPath
 
 }

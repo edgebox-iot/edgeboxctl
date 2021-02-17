@@ -32,12 +32,6 @@ type EdgeAppService struct {
 
 const configFilename = "/edgebox-compose.yml"
 
-// const edgeAppsPath = "/home/system/components/apps/"
-const edgeAppsPath = "/home/jpt/Repositories/edgebox/apps/"
-
-// const wsPath = "/home/system/components/ws/"
-const wsPath = "/home/jpt/Repositories/edgebox/ws"
-
 // GetEdgeApps : Returns a list of EdgeApp struct filled with information
 func GetEdgeApps() []EdgeApp {
 
@@ -45,7 +39,7 @@ func GetEdgeApps() []EdgeApp {
 
 	// Building list of available edgeapps in the system with their status
 
-	files, err := ioutil.ReadDir(edgeAppsPath)
+	files, err := ioutil.ReadDir(utils.GetPath("edgeAppsPath"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,7 +48,7 @@ func GetEdgeApps() []EdgeApp {
 		if f.IsDir() {
 			// It is a folder that most probably contains an EdgeApp.
 			// To be fully sure, test that edgebox-compose.yml file exists in the target directory.
-			_, err := os.Stat(edgeAppsPath + f.Name() + configFilename)
+			_, err := os.Stat(utils.GetPath("edgeAppsPath") + f.Name() + configFilename)
 			if !os.IsNotExist(err) {
 				// File exists. Start digging!
 				edgeAppName := "Nextcloud"
@@ -105,7 +99,7 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 
 	// strConfigFile := string(configFile) // convert content to a 'string'
 
-	cmdArgs := []string{"-r", ".services | keys[]", edgeAppsPath + ID + configFilename}
+	cmdArgs := []string{"-r", ".services | keys[]", utils.GetPath("edgeAppsPath") + ID + configFilename}
 	servicesString := utils.Exec("yq", cmdArgs)
 	serviceSlices := strings.Split(servicesString, "\n")
 	serviceSlices = utils.DeleteEmptySlices(serviceSlices)
@@ -113,7 +107,7 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 
 	for _, serviceID := range serviceSlices {
 		log.Println(serviceID)
-		cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "ps", "-q", serviceID}
+		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "ps", "-q", serviceID}
 		cmdResult := utils.Exec("docker-compose", cmdArgs)
 		isRunning := false
 		if cmdResult != "" {
@@ -129,7 +123,7 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 // RunEdgeApp : Run an EdgeApp and return its most current status
 func RunEdgeApp(ID string) EdgeAppStatus {
 
-	cmdArgs := []string{"-f", wsPath + "/docker-compose.yml", "up", ID}
+	cmdArgs := []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "up", ID}
 	utils.Exec("docker-compose", cmdArgs)
 
 	return GetEdgeAppStatus(ID)
@@ -139,7 +133,7 @@ func RunEdgeApp(ID string) EdgeAppStatus {
 // StopEdgeApp : Stops an EdgeApp and return its most current status
 func StopEdgeApp(ID string) EdgeAppStatus {
 
-	cmdArgs := []string{"-f", wsPath + "/docker-compose.yml", "down", ID}
+	cmdArgs := []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "down", ID}
 	utils.Exec("docker-compose", cmdArgs)
 
 	return GetEdgeAppStatus(ID)
