@@ -31,8 +31,8 @@ type EdgeAppService struct {
 }
 
 const configFilename = "/edgebox-compose.yml"
-const edgeAppsPath = "/home/jpt/Repositories/edgebox/apps/"
-const wsPath = "/home/jpt/Repositories/edgebox/ws/"
+const edgeAppsPath = "/home/system/components/apps/"
+const wsPath = "/home/system/components/ws/"
 
 // GetEdgeApps : Returns a list of EdgeApp struct filled with information
 func GetEdgeApps() []EdgeApp {
