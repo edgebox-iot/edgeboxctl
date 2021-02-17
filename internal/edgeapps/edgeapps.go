@@ -120,3 +120,23 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 	return edgeAppServices
 
 }
+
+// RunEdgeApp : Run an EdgeApp and return its most current status
+func RunEdgeApp(ID string) EdgeAppStatus {
+
+	cmdArgs := []string{"-f", wsPath + "/docker-compose.yml", "up", ID}
+	utils.Exec("docker-compose", cmdArgs)
+
+	return GetEdgeAppStatus(ID)
+
+}
+
+// StopEdgeApp : Stops an EdgeApp and return its most current status
+func StopEdgeApp(ID string) EdgeAppStatus {
+
+	cmdArgs := []string{"-f", wsPath + "/docker-compose.yml", "down", ID}
+	utils.Exec("docker-compose", cmdArgs)
+
+	return GetEdgeAppStatus(ID)
+
+}
