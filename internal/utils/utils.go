@@ -67,7 +67,8 @@ func GetPath(pathKey string) string {
 	targetPath := ""
 
 	if err != nil {
-		log.Println("Project .env file not found withing project root. Using only hardcoded path variables.")
+		// log.Println("Project .env file not found withing project root. Using only hardcoded path variables.")
+		// Do Nothing...
 	}
 
 	switch pathKey {
