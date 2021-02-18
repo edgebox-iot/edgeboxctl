@@ -65,8 +65,15 @@ func main() {
 	// infinite loop
 	for {
 
-		tick++ // Tick is an int, so eventually will "go out of ticks?" Maybe we want to reset the ticks every once in a while, to avoid working with big numbers...
-		systemIterator(name, tick)
+		if isSystemReady() {
+			tick++ // Tick is an int, so eventually will "go out of ticks?" Maybe we want to reset the ticks every once in a while, to avoid working with big numbers...
+			systemIterator(name, tick)
+		} else {
+			// Wait about 60 seconds before trying again.
+			log.Printf("System not ready. Next try will be executed in 60 seconds")
+			time.Sleep(defaultNotReadySleepTime)
+		}
+		
 
 	}
 
@@ -105,26 +112,18 @@ func isDatabaseReady() bool {
 func systemIterator(name *string, tick int) {
 
 	log.Printf("Tick is %d", tick)
-
-	if isSystemReady() {
-		// Wait about 60 seconds before trying again.
-		log.Printf("System not ready. Next try will be executed in 60 seconds")
-		time.Sleep(defaultNotReadySleepTime)
+	
+	tasks.ExecuteSchedules(tick)
+	nextTask := tasks.GetNextTask()
+	if nextTask.Task != "" {
+		log.Printf("Executing task %s / Args: %s", nextTask.Task, nextTask.Args)
+		tasks.ExecuteTask(nextTask)
 	} else {
-		
-		tasks.ExecuteSchedules(tick)
-		nextTask := tasks.GetNextTask()
-		if nextTask.Task != "" {
-			log.Printf("Executing task %s / Args: %s", nextTask.Task, nextTask.Args)
-			tasks.ExecuteTask(nextTask)
-		} else {
-			log.Printf("No tasks to execute.")
-		}
-
-		// Wait about 1 second before resumming operations.
-		log.Printf("Next instruction will be executed 1 second")
-		time.Sleep(defaultSleepTime)
-
+		log.Printf("No tasks to execute.")
 	}
+
+	// Wait about 1 second before resumming operations.
+	log.Printf("Next instruction will be executed 1 second")
+	time.Sleep(defaultSleepTime)
 
 }
