@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"log"
 	"os/exec"
-	"fmt"
-
+	
 	"github.com/joho/godotenv"
 )
 
