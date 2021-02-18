@@ -111,10 +111,8 @@ func systemIterator(name *string, tick int) {
 		log.Printf("System not ready. Next try will be executed in 60 seconds")
 		time.Sleep(defaultNotReadySleepTime)
 	} else {
+		
 		tasks.ExecuteSchedules(tick)
-		// Wait about 1 second before resumming operations.
-		log.Printf("Next instruction will be executed 1 second")
-		time.Sleep(defaultSleepTime)
 		nextTask := tasks.GetNextTask()
 		if nextTask.Task != "" {
 			log.Printf("Executing task %s / Args: %s", nextTask.Task, nextTask.Args)
@@ -122,6 +120,10 @@ func systemIterator(name *string, tick int) {
 		} else {
 			log.Printf("No tasks to execute.")
 		}
+
+		// Wait about 1 second before resumming operations.
+		log.Printf("Next instruction will be executed 1 second")
+		time.Sleep(defaultSleepTime)
 
 	}
 
