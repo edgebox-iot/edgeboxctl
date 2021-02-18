@@ -31,6 +31,14 @@ type taskSetupTunnelArgs struct {
 	NodeName        string `json:"node_name"`
 }
 
+type taskStartEdgeAppArgs struct {
+	ID string `json:"id"`
+}
+
+type taskStopEdgeAppArgs struct {
+	ID string `json:"id"`
+}
+
 // GetNextTask : Performs a MySQL query over the device's Edgebox API
 func GetNextTask() Task {
 
@@ -110,13 +118,29 @@ func ExecuteTask(task Task) Task {
 			}
 
 		case "start_edgeapp":
-			log.Printf("Starting EdgeApp...")
-			task.Result = sql.NullString{String: taskStartEdgeApp(), Valid: true}
-			// ...
+
+			log.Println("Starting EdgeApp...")
+			var args taskStartEdgeAppArgs
+			err := json.Unmarshal([]byte(task.Args), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of start_edgeapp task: %s", err)
+			} else {
+				taskResult := taskStartEdgeApp(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
 		case "stop_edgeapp":
-			log.Printf("Stopping EdgeApp...")
-			task.Result = sql.NullString{String: taskStopEdgeApp(), Valid: true}
-			// ...
+
+			log.Println("Stopping EdgeApp...")
+			var args taskStopEdgeAppArgs
+			err := json.Unmarshal([]byte(task.Args), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of stop_edgeapp task: %s", err)
+			} else {
+				taskResult := taskStopEdgeApp(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
 		}
 	}
 
@@ -177,6 +201,34 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 
 }
 
+func taskStartEdgeApp(args taskStartEdgeAppArgs) string {
+
+	fmt.Println("Executing taskStartEdgeApp for " + args.ID)
+
+	result := edgeapps.RunEdgeApp(args.ID)
+	
+	resultJSON, _ := json.Marshal(result)
+
+	taskGetEdgeApps() // This task will imediatelly update the entry in the api database.
+
+	return string(resultJSON)
+
+}
+
+func taskStopEdgeApp(args taskStopEdgeAppArgs) string {
+
+	fmt.Println("Executing taskStopEdgeApp for " + args.ID)
+
+	result := edgeapps.StopEdgeApp(args.ID)
+	
+	resultJSON, _ := json.Marshal(result)
+
+	taskGetEdgeApps() // This task will imediatelly update the entry in the api database.
+
+	return string(resultJSON)
+
+}
+
 func taskGetEdgeApps() string {
 
 	fmt.Println("Executing taskGetEdgeApps")
@@ -204,14 +256,4 @@ func taskGetEdgeApps() string {
 
 	return string(edgeAppsJSON)
 
-}
-
-func taskStartEdgeApp() string {
-
-	return "OK"
-}
-
-func taskStopEdgeApp() string {
-
-	return "OK"
 }

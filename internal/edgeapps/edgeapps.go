@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -34,6 +35,7 @@ type EdgeAppService struct {
 
 const configFilename = "/edgebox-compose.yml"
 const envFilename = "/edgebox.env"
+const defaultContainerOperationSleepTime time.Duration = time.Second * 10
 
 // GetEdgeApps : Returns a list of EdgeApp struct filled with information
 func GetEdgeApps() []EdgeApp {
@@ -117,7 +119,7 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 	var edgeAppServices []EdgeAppService
 
 	for _, serviceID := range serviceSlices {
-		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "ps", "-q", serviceID}
+		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "exec", "-T", serviceID, "echo", "'Service Check'"}
 		cmdResult := utils.Exec("docker-compose", cmdArgs)
 		isRunning := false
 		if cmdResult != "" {
@@ -133,8 +135,19 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 // RunEdgeApp : Run an EdgeApp and return its most current status
 func RunEdgeApp(ID string) EdgeAppStatus {
 
-	cmdArgs := []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "up", ID}
-	utils.Exec("docker-compose", cmdArgs)
+	services := GetEdgeAppServices(ID)
+
+	cmdArgs := []string{}
+
+	for _, service := range services {
+
+		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "start", service.ID}
+		utils.Exec("docker-compose", cmdArgs)
+
+	}
+
+	// Wait for it to settle up before continuing...
+	time.Sleep(defaultContainerOperationSleepTime)
 
 	return GetEdgeAppStatus(ID)
 
@@ -143,8 +156,19 @@ func RunEdgeApp(ID string) EdgeAppStatus {
 // StopEdgeApp : Stops an EdgeApp and return its most current status
 func StopEdgeApp(ID string) EdgeAppStatus {
 
-	cmdArgs := []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "down", ID}
-	utils.Exec("docker-compose", cmdArgs)
+	services := GetEdgeAppServices(ID)
+
+	cmdArgs := []string{}
+
+	for _, service := range services {
+
+		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "stop", service.ID}
+		utils.Exec("docker-compose", cmdArgs)
+
+	}
+
+	// Wait for it to settle up before continuing...
+	time.Sleep(defaultContainerOperationSleepTime)
 
 	return GetEdgeAppStatus(ID)
 
