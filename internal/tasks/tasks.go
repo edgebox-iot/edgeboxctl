@@ -90,14 +90,10 @@ func ExecuteTask(task Task) Task {
 
 	defer db.Close()
 
-	statusUpdate, err := db.Query("UPDATE tasks SET status = 1 WHERE ID = " + strconv.Itoa(task.ID))
+	_, err = db.Query("UPDATE tasks SET status = 1 WHERE ID = " + strconv.Itoa(task.ID))
 
 	if err != nil {
 		panic(err.Error())
-	}
-
-	for statusUpdate.Next() {
-
 	}
 
 	if diagnostics.Version == "dev" {
@@ -206,7 +202,7 @@ func taskStartEdgeApp(args taskStartEdgeAppArgs) string {
 	fmt.Println("Executing taskStartEdgeApp for " + args.ID)
 
 	result := edgeapps.RunEdgeApp(args.ID)
-	
+
 	resultJSON, _ := json.Marshal(result)
 
 	taskGetEdgeApps() // This task will imediatelly update the entry in the api database.
@@ -220,7 +216,7 @@ func taskStopEdgeApp(args taskStopEdgeAppArgs) string {
 	fmt.Println("Executing taskStopEdgeApp for " + args.ID)
 
 	result := edgeapps.StopEdgeApp(args.ID)
-	
+
 	resultJSON, _ := json.Marshal(result)
 
 	taskGetEdgeApps() // This task will imediatelly update the entry in the api database.
@@ -244,14 +240,10 @@ func taskGetEdgeApps() string {
 
 	defer db.Close()
 
-	statusUpdate, err := db.Query("REPLACE into options (name, value) VALUES ('EDGEAPPS_LIST','" + string(edgeAppsJSON) + "');")
+	_, err = db.Query("REPLACE into options (name, value) VALUES ('EDGEAPPS_LIST','" + string(edgeAppsJSON) + "');")
 
 	if err != nil {
 		panic(err.Error())
-	}
-
-	for statusUpdate.Next() {
-
 	}
 
 	return string(edgeAppsJSON)
