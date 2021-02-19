@@ -14,11 +14,13 @@ import (
 
 // EdgeApp : Struct representing an EdgeApp in the system
 type EdgeApp struct {
-	ID         string           `json:"id"`
-	Name       string           `json:"name"`
-	Status     EdgeAppStatus    `json:"status"`
-	Services   []EdgeAppService `json:"services"`
-	NetworkURL string           `json:"network_url"`
+	ID                 string           `json:"id"`
+	Name               string           `json:"name"`
+	Status             EdgeAppStatus    `json:"status"`
+	Services           []EdgeAppService `json:"services"`
+	InternetAccessible bool             `json:"internet_accessible"`
+	NetworkURL         string           `json:"network_url"`
+	InternetURL        string           `json:"internet_url"`
 }
 
 // EdgeAppStatus : Struct representing possible EdgeApp statuses (code + description)
@@ -35,6 +37,7 @@ type EdgeAppService struct {
 
 const configFilename = "/edgebox-compose.yml"
 const envFilename = "/edgebox.env"
+const myEdgeAppServiceEnvFilename = "/myedgeapp.env"
 const defaultContainerOperationSleepTime time.Duration = time.Second * 10
 
 // GetEdgeApps : Returns a list of EdgeApp struct filled with information
@@ -69,7 +72,26 @@ func GetEdgeApps() []EdgeApp {
 					}
 				}
 
-				edgeApp := EdgeApp{ID: f.Name(), Name: edgeAppName, Status: GetEdgeAppStatus(f.Name()), Services: GetEdgeAppServices(f.Name()), NetworkURL: f.Name() + ".edgebox.local"}
+				edgeAppInternetAccessible := false
+				edgeAppInternetURL := ""
+
+				myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + f.Name() + myEdgeAppServiceEnvFilename)
+				if err != nil {
+					if myEdgeAppServiceEnv["URL"] != "" {
+						edgeAppInternetAccessible = true
+						edgeAppInternetURL = myEdgeAppServiceEnv["URL"]
+					}
+				}
+
+				edgeApp := EdgeApp{
+					ID:                 f.Name(),
+					Name:               edgeAppName,
+					Status:             GetEdgeAppStatus(f.Name()),
+					Services:           GetEdgeAppServices(f.Name()),
+					InternetAccessible: edgeAppInternetAccessible,
+					NetworkURL:         f.Name() + ".edgebox.local",
+					InternetURL:        edgeAppInternetURL,
+				}
 				edgeApps = append(edgeApps, edgeApp)
 			}
 
