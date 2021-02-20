@@ -23,6 +23,12 @@ type EdgeApp struct {
 	InternetURL        string           `json:"internet_url"`
 }
 
+// MaybeEdgeApp : Boolean flag for validation of edgeapp existance
+type MaybeEdgeApp struct {
+	EdgeApp EdgeApp `json:"edge_app"`
+	Valid   bool    `json:"valid"`
+}
+
 // EdgeAppStatus : Struct representing possible EdgeApp statuses (code + description)
 type EdgeAppStatus struct {
 	ID          int    `json:"id"`
@@ -40,7 +46,61 @@ const envFilename = "/edgebox.env"
 const myEdgeAppServiceEnvFilename = "/myedgeapp.env"
 const defaultContainerOperationSleepTime time.Duration = time.Second * 10
 
-// GetEdgeApps : Returns a list of EdgeApp struct filled with information
+// GetEdgeApp : Returns a EdgeApp struct with the current application information
+func GetEdgeApp(ID string) MaybeEdgeApp {
+
+	result := MaybeEdgeApp{
+		EdgeApp: EdgeApp{},
+		Valid:   false,
+	}
+
+	_, err := os.Stat(utils.GetPath("edgeAppsPath") + ID + configFilename)
+	if !os.IsNotExist(err) {
+		// File exists. Start digging!
+
+		edgeAppName := ID
+
+		edgeAppEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + ID + envFilename)
+
+		if err != nil {
+			log.Println("Error loading .env file for edgeapp " + edgeAppName)
+		} else {
+			if edgeAppEnv["EDGEAPP_NAME"] != "" {
+				edgeAppName = edgeAppEnv["EDGEAPP_NAME"]
+			}
+		}
+
+		edgeAppInternetAccessible := false
+		edgeAppInternetURL := ""
+
+		myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename)
+		if err != nil {
+			if myEdgeAppServiceEnv["INTERNET_URL"] != "" {
+				edgeAppInternetAccessible = true
+				edgeAppInternetURL = myEdgeAppServiceEnv["INTERNET_URL"]
+			}
+		}
+
+		result = MaybeEdgeApp{
+			EdgeApp: EdgeApp{
+				ID:                 ID,
+				Name:               edgeAppName,
+				Status:             GetEdgeAppStatus(ID),
+				Services:           GetEdgeAppServices(ID),
+				InternetAccessible: edgeAppInternetAccessible,
+				NetworkURL:         ID + ".edgebox.local",
+				InternetURL:        edgeAppInternetURL,
+			},
+			Valid: true,
+		}
+
+	}
+
+	return result
+
+}
+
+// GetEdgeApps : Returns a list of all available EdgeApps in structs filled with information
 func GetEdgeApps() []EdgeApp {
 
 	var edgeApps []EdgeApp
@@ -56,43 +116,12 @@ func GetEdgeApps() []EdgeApp {
 		if f.IsDir() {
 			// It is a folder that most probably contains an EdgeApp.
 			// To be fully sure, test that edgebox-compose.yml file exists in the target directory.
-			_, err := os.Stat(utils.GetPath("edgeAppsPath") + f.Name() + configFilename)
-			if !os.IsNotExist(err) {
-				// File exists. Start digging!
+			maybeEdgeApp := GetEdgeApp(f.Name())
+			if maybeEdgeApp.Valid {
 
-				edgeAppName := f.Name()
-
-				edgeAppEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + f.Name() + envFilename)
-
-				if err != nil {
-					log.Println("Error loading .env file for edgeapp " + f.Name())
-				} else {
-					if edgeAppEnv["EDGEAPP_NAME"] != "" {
-						edgeAppName = edgeAppEnv["EDGEAPP_NAME"]
-					}
-				}
-
-				edgeAppInternetAccessible := false
-				edgeAppInternetURL := ""
-
-				myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + f.Name() + myEdgeAppServiceEnvFilename)
-				if err != nil {
-					if myEdgeAppServiceEnv["URL"] != "" {
-						edgeAppInternetAccessible = true
-						edgeAppInternetURL = myEdgeAppServiceEnv["URL"]
-					}
-				}
-
-				edgeApp := EdgeApp{
-					ID:                 f.Name(),
-					Name:               edgeAppName,
-					Status:             GetEdgeAppStatus(f.Name()),
-					Services:           GetEdgeAppServices(f.Name()),
-					InternetAccessible: edgeAppInternetAccessible,
-					NetworkURL:         f.Name() + ".edgebox.local",
-					InternetURL:        edgeAppInternetURL,
-				}
+				edgeApp := maybeEdgeApp.EdgeApp
 				edgeApps = append(edgeApps, edgeApp)
+
 			}
 
 		}
@@ -193,5 +222,47 @@ func StopEdgeApp(ID string) EdgeAppStatus {
 	time.Sleep(defaultContainerOperationSleepTime)
 
 	return GetEdgeAppStatus(ID)
+
+}
+
+// EnableOnline : Write environment file and rebuild the necessary containers. Rebuilds containers in project (in case of change only)
+func EnableOnline(ID string, InternetURL string) MaybeEdgeApp {
+
+	maybeEdgeApp := GetEdgeApp(ID)
+	if maybeEdgeApp.Valid { // We're only going to do this operation if the EdgeApp actually exists.
+		// Create the myedgeapp.env file and add the InternetURL entry to it
+		envFilePath := utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename
+		env, _ := godotenv.Unmarshal("INTERNET_URL=" + InternetURL)
+		_ = godotenv.Write(env, envFilePath)
+	}
+
+	buildFrameworkContainers()
+
+	return GetEdgeApp(ID) // Return refreshed information
+
+}
+
+// DisableOnline : Removes env files necessary for system external access config. Rebuilds containers in project (in case of change only).
+func DisableOnline(ID string) MaybeEdgeApp {
+
+	envFilePath := utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename
+	_, err := godotenv.Read(envFilePath)
+	if err != nil {
+		cmdArgs := []string{envFilePath}
+		utils.Exec("rm", cmdArgs)
+	}
+
+	buildFrameworkContainers()
+
+	return GetEdgeApp(ID)
+
+}
+
+func buildFrameworkContainers() {
+
+	cmdArgs := []string{"--build"}
+	utils.Exec("./"+utils.GetPath("wsPath")+"/ws", cmdArgs)
+
+	time.Sleep(defaultContainerOperationSleepTime)
 
 }

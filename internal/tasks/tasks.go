@@ -39,6 +39,15 @@ type taskStopEdgeAppArgs struct {
 	ID string `json:"id"`
 }
 
+type taskEnableOnlineArgs struct {
+	ID          string `json:"id"`
+	InternetURL string `json:"internet_url"`
+}
+
+type taskDisableOnlineArgs struct {
+	ID string `json:"id"`
+}
+
 // GetNextTask : Performs a MySQL query over the device's Edgebox API
 func GetNextTask() Task {
 
@@ -137,7 +146,32 @@ func ExecuteTask(task Task) Task {
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
+		case "enable_online":
+
+			log.Println("Enabling online access to EdgeApp...")
+			var args taskEnableOnlineArgs
+			err := json.Unmarshal([]byte(task.Args), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of enable_online task: %s", err)
+			} else {
+				taskResult := taskEnableOnline(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "disable_online":
+
+			log.Println("Disabling online access to EdgeApp...")
+			var args taskDisableOnlineArgs
+			err := json.Unmarshal([]byte(task.Args), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of enable_online task: %s", err)
+			} else {
+				taskResult := taskDisableOnline(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
 		}
+
 	}
 
 	if task.Result.Valid {
@@ -220,6 +254,34 @@ func taskStopEdgeApp(args taskStopEdgeAppArgs) string {
 	resultJSON, _ := json.Marshal(result)
 
 	taskGetEdgeApps() // This task will imediatelly update the entry in the api database.
+
+	return string(resultJSON)
+
+}
+
+func taskEnableOnline(args taskEnableOnlineArgs) string {
+
+	fmt.Println("Executing taskEnableOnline for " + args.ID)
+
+	result := edgeapps.EnableOnline(args.ID, args.InternetURL)
+
+	resultJSON, _ := json.Marshal(result)
+
+	taskGetEdgeApps()
+
+	return string(resultJSON)
+
+}
+
+func taskDisableOnline(args taskDisableOnlineArgs) string {
+
+	fmt.Println("Executing taskEnableOnline for " + args.ID)
+
+	result := edgeapps.DisableOnline(args.ID)
+
+	resultJSON, _ := json.Marshal(result)
+
+	taskGetEdgeApps()
 
 	return string(resultJSON)
 
