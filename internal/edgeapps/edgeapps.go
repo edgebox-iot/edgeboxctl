@@ -265,7 +265,7 @@ func DisableOnline(ID string) MaybeEdgeApp {
 func buildFrameworkContainers() {
 
 	cmdArgs := []string{utils.GetPath("wsPath") + "ws", "--build"}
-	utils.Exec("sh", cmdArgs)
+	utils.ExecAndStream("sh", cmdArgs)
 
 	time.Sleep(defaultContainerOperationSleepTime)
 

@@ -3,11 +3,34 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"os/exec"
 
 	"github.com/joho/godotenv"
 )
+
+// ExecAndStream : Runs a terminal command, but streams progress instead of outputting. Ideal for long lived process that need to be logged.
+func ExecAndStream(command string, args []string) {
+
+	cmd := exec.Command(command, args...)
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+	cmd.Dir = GetPath("wsPath")
+
+	err := cmd.Run()
+
+	if err != nil {
+		log.Fatalf("cmd.Run() failed with %s\n", err)
+	}
+
+	outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
+	fmt.Printf("\nout:\n%s\nerr:\n%s\n", outStr, errStr)
+
+}
 
 // Exec : Runs a terminal Command, catches and logs errors, returns the result.
 func Exec(command string, args []string) string {
