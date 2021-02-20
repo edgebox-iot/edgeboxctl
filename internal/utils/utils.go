@@ -2,9 +2,10 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os/exec"
-	
+
 	"github.com/joho/godotenv"
 )
 
@@ -15,13 +16,14 @@ func Exec(command string, args []string) string {
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
+	cmd.Dir = GetPath("wsPath")
 	err := cmd.Run()
 	if err != nil {
 		// TODO: Deal with possibility of error in command, allow explicit error handling and return proper formatted stderr
-		// log.Println(fmt.Sprint(err) + ": " + stderr.String()) // ... Silence...
+		log.Println(fmt.Sprint(err) + ": " + stderr.String()) // ... Silence...
 	}
 
-	// log.Println("Result: " + out.String()) // ... Silence ...
+	log.Println("Result: " + out.String()) // ... Silence ...
 
 	return out.String()
 

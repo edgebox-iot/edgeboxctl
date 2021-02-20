@@ -275,7 +275,7 @@ func taskEnableOnline(args taskEnableOnlineArgs) string {
 
 func taskDisableOnline(args taskDisableOnlineArgs) string {
 
-	fmt.Println("Executing taskEnableOnline for " + args.ID)
+	fmt.Println("Executing taskDisableOnline for " + args.ID)
 
 	result := edgeapps.DisableOnline(args.ID)
 

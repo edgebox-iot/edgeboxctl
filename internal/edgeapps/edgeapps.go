@@ -75,6 +75,8 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 
 		myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename)
 		if err != nil {
+			log.Println("No myedge.app environment file found. Status is Network-Only")
+		} else {
 			if myEdgeAppServiceEnv["INTERNET_URL"] != "" {
 				edgeAppInternetAccessible = true
 				edgeAppInternetURL = myEdgeAppServiceEnv["INTERNET_URL"]
@@ -248,6 +250,8 @@ func DisableOnline(ID string) MaybeEdgeApp {
 	envFilePath := utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename
 	_, err := godotenv.Read(envFilePath)
 	if err != nil {
+		log.Println("myedge.app environment file for " + ID + " not found. No need to delete.")
+	} else {
 		cmdArgs := []string{envFilePath}
 		utils.Exec("rm", cmdArgs)
 	}
@@ -260,8 +264,8 @@ func DisableOnline(ID string) MaybeEdgeApp {
 
 func buildFrameworkContainers() {
 
-	cmdArgs := []string{"--build"}
-	utils.Exec("./"+utils.GetPath("wsPath")+"/ws", cmdArgs)
+	cmdArgs := []string{utils.GetPath("wsPath") + "ws", "--build"}
+	utils.Exec("sh", cmdArgs)
 
 	time.Sleep(defaultContainerOperationSleepTime)
 
