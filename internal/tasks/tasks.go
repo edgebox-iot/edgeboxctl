@@ -7,9 +7,9 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/edgebox-iot/sysctl/internal/diagnostics"
-	"github.com/edgebox-iot/sysctl/internal/edgeapps"
-	"github.com/edgebox-iot/sysctl/internal/utils"
+	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
+	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
+	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 )
 

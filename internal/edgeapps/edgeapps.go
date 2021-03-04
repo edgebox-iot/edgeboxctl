@@ -9,7 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/edgebox-iot/sysctl/internal/utils"
+	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 )
 
 // EdgeApp : Struct representing an EdgeApp in the system

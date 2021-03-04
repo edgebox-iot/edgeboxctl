@@ -23,17 +23,17 @@
     <img src="docs/img/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">Edgebox SysCtl Module</h3>
+  <h3 align="center">Edgebox Control Module</h3>
 
   <p align="center">
     A System Control module written in Go. Its resonsability is to configure dependencies and perform system tasks, automatically in a schedule, or by command.
     <br />
-    <a href="https://github.com/github_username/sysctl"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/github_username/edgeboxctl"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/github_username/sysctl/issues">Report Bug</a>
+    <a href="https://github.com/github_username/edgeboxctl/issues">Report Bug</a>
     ·
-    <a href="https://github.com/github_username/sysctl/issues">Request Feature</a>
+    <a href="https://github.com/github_username/edgeboxctl/issues">Request Feature</a>
   </p>
 </p>
 
@@ -92,7 +92,7 @@ Check the following links for more info on [Docker](https://www.docker.com/) and
 
 1. Clone the repo
 ```sh
-git clone https://github.com/edgebox-iot/sysctl.git
+git clone https://github.com/edgebox-iot/edgeboxctl.git
 ```
 2. Run Docker-Compose
 ```sh
@@ -111,7 +111,7 @@ _For more examples, please refer to the [Documentation](https://github.com/edgeb
 <!-- ROADMAP -->
 ## Roadmap
 
-See the [open issues](https://github.com/edgebox-iot/sysctl/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/edgebox-iot/edgeboxctl/issues) for a list of proposed features (and known issues).
 
 
 
@@ -136,15 +136,15 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/edgebox-iot/sysctl.svg?style=flat-square
-[contributors-url]: https://github.com/edgebox-iot/sysctl/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/edgebox-iot/sysctl.svg?style=flat-square
-[forks-url]: https://github.com/edgebox-iot/sysctl/network/members
-[stars-shield]: https://img.shields.io/github/stars/edgebox-iot/sysctl.svg?style=flat-square
-[stars-url]: https://github.com/edgebox-iot/sysctl/stargazers
-[issues-shield]: https://img.shields.io/github/issues/edgebox-iot/sysctl.svg?style=flat-square
-[issues-url]: https://github.com/edgebox-iot/sysctl/issues
-[license-shield]: https://img.shields.io/github/license/edgebox-iot/sysctl.svg?style=flat-square
-[license-url]: https://github.com/edgebox-iot/sysctl/blob/master/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/edgebox-iot/edgeboxctl.svg?style=flat-square
+[contributors-url]: https://github.com/edgebox-iot/edgeboxctl/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/edgebox-iot/edgeboxctl.svg?style=flat-square
+[forks-url]: https://github.com/edgebox-iot/edgeboxctl/network/members
+[stars-shield]: https://img.shields.io/github/stars/edgebox-iot/edgeboxctl.svg?style=flat-square
+[stars-url]: https://github.com/edgebox-iot/edgeboxctl/stargazers
+[issues-shield]: https://img.shields.io/github/issues/edgebox-iot/edgeboxctl.svg?style=flat-square
+[issues-url]: https://github.com/edgebox-iot/edgeboxctl/issues
+[license-shield]: https://img.shields.io/github/license/edgebox-iot/edgeboxctl.svg?style=flat-square
+[license-url]: https://github.com/edgebox-iot/edgeboxctl/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/edgebox-iot

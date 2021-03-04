@@ -9,14 +9,17 @@ build-all:
 	GOOS=linux GOARCH=amd64 make build
 	GOOS=linux GOARCH=arm make build
 
+build-prod:
+	GDOS=linux GOARCH=arm RELEASE=prod make build
+
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
 	GOOS=${GOOS} GOARCH=${GOARCH} go build \
 		-trimpath -ldflags "-s -w -X ${PROJECT}/internal/diagnostics.Version=${RELEASE} \
 		-X ${PROJECT}/internal/diagnostics.Commit=${COMMIT} \
 		-X ${PROJECT}/internal/diagnostics.BuildDate=${BUILD_DATE}" \
-		-o bin/sysctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/sysctl
-	cp ./bin/sysctl-${GOOS}-${GOARCH} ./bin/sysctl
+		-o bin/sysctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/edgeboxctl
+	cp ./bin/edgeboxctl-${GOOS}-${GOARCH} ./bin/edgeboxctl
 
 clean:
 	rm -rf ${BUILD_DIR}
