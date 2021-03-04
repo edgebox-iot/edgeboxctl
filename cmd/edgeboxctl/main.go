@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/edgebox-iot/sysctl/internal/diagnostics"
-	"github.com/edgebox-iot/sysctl/internal/tasks"
-	"github.com/edgebox-iot/sysctl/internal/utils"
+	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
+	"github.com/edgebox-iot/edgeboxctl/internal/tasks"
+	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 )
 
 const defaultNotReadySleepTime time.Duration = time.Second * 60
@@ -37,7 +37,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	log.Printf("Starting Sysctl service for %s", *name)
+	log.Printf("Starting edgeboxctl service for %s", *name)
 
 	// setup signal catching
 	sigs := make(chan os.Signal, 1)

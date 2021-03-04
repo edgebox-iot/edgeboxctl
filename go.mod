@@ -1,4 +1,4 @@
-module github.com/edgebox-iot/sysctl
+module github.com/edgebox-iot/edgeboxctl
 
 go 1.15
 
