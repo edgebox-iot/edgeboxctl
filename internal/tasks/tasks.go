@@ -35,6 +35,14 @@ type taskStartEdgeAppArgs struct {
 	ID string `json:"id"`
 }
 
+type taskInstallEdgeAppArgs struct {
+	ID string `json:"id"`
+}
+
+type taskRemoveEdgeAppArgs struct {
+	ID string `json:"id"`
+}
+
 type taskStopEdgeAppArgs struct {
 	ID string `json:"id"`
 }
@@ -119,6 +127,31 @@ func ExecuteTask(task Task) Task {
 				log.Printf("Error reading arguments of setup_bootnode task: %s", err)
 			} else {
 				taskResult := taskSetupTunnel(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "install_edgeapp":
+
+			log.Println("Installing EdgeApp...")
+			var args taskInstallEdgeAppArgs
+			err := json.Unmarshal([]byte(task.Args), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of install_edgeapp task: %s", err)
+			} else {
+				taskResult := taskInstallEdgeApp(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "remove_edgeapp":
+
+			
+			log.Println("Removing EdgeApp...")
+			var args taskRemoveEdgeAppArgs
+			err := json.Unmarshal([]byte(task.Args), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of remove_edgeapp task: %s", err)
+			} else {
+				taskResult := taskRemoveEdgeApp(args)
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
@@ -228,6 +261,36 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 
 	output := "OK" // Better check / logging of command execution result.
 	return output
+
+}
+
+func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
+
+	fmt.Println("Executing taskInstallEdgeApp for " + args.ID)
+
+	result := edgeapps.SetEdgeAppInstalled(args.ID)
+
+	resultJSON, _ := json.Marshal(result)
+
+	taskGetEdgeApps()
+
+	return string(resultJSON)
+
+
+}
+
+func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
+
+	fmt.Println("Executing taskRemoveEdgeApp for " + args.ID)
+
+	result := edgeapps.SetEdgeAppNotInstalled(args.ID)
+
+	resultJSON, _ := json.Marshal(result)
+
+	taskGetEdgeApps()
+
+	return string(resultJSON)
+
 
 }
 

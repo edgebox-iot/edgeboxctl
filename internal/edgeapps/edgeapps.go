@@ -43,6 +43,7 @@ type EdgeAppService struct {
 
 const configFilename = "/edgebox-compose.yml"
 const envFilename = "/edgebox.env"
+const runnableFilename = "/.run"
 const myEdgeAppServiceEnvFilename = "/myedgeapp.env"
 const defaultContainerOperationSleepTime time.Duration = time.Second * 10
 
@@ -102,6 +103,64 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 
 }
 
+func IsEdgeAppInstalled(ID string) bool {
+
+	result := false
+
+	_, err := os.Stat(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
+	if !os.IsNotExist(err) {
+		result = true
+	}
+
+	return result
+
+}
+
+func SetEdgeAppInstalled(ID string) bool {
+
+	result := true
+
+	_, err := os.Stat(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
+	if os.IsNotExist(err) {
+
+
+		_, err := os.Create(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
+		result = true
+
+		if err != nil {
+			log.Fatal("Runnable file for EdgeApp could not be created!")
+			result = false
+		}
+
+		buildFrameworkContainers()
+
+
+	} else {
+
+		// Is already installed.
+		result = false
+
+	}
+
+	return result
+
+}
+
+func SetEdgeAppNotInstalled(ID string) bool {
+
+	result := true
+	err := os.Remove(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
+	if err != nil {
+		result = false 
+        log.Fatal(err) 
+    }
+
+	buildFrameworkContainers()
+
+	return result
+
+}
+
 // GetEdgeApps : Returns a list of all available EdgeApps in structs filled with information
 func GetEdgeApps() []EdgeApp {
 
@@ -142,20 +201,29 @@ func GetEdgeAppStatus(ID string) EdgeAppStatus {
 	// - No service running = EdgeApp is off
 
 	runningServices := 0
-	status := EdgeAppStatus{0, "off"}
-	services := GetEdgeAppServices(ID)
-	for _, edgeAppService := range services {
-		if edgeAppService.IsRunning {
-			runningServices++
+	status := EdgeAppStatus{-1, "not-installed"}
+
+	if !IsEdgeAppInstalled(ID) {
+
+		status = EdgeAppStatus{0, "off"}
+
+	} else {
+
+		services := GetEdgeAppServices(ID)
+		for _, edgeAppService := range services {
+			if edgeAppService.IsRunning {
+				runningServices++
+			}
 		}
-	}
 
-	if runningServices > 0 && runningServices != len(services) {
-		status = EdgeAppStatus{2, "error"}
-	}
+		if runningServices > 0 && runningServices != len(services) {
+			status = EdgeAppStatus{2, "error"}
+		}
 
-	if runningServices == len(services) {
-		status = EdgeAppStatus{1, "on"}
+		if runningServices == len(services) {
+			status = EdgeAppStatus{1, "on"}
+		}
+
 	}
 
 	return status
