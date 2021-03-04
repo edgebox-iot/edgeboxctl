@@ -10,7 +10,7 @@ build-all:
 	GOOS=linux GOARCH=arm make build
 
 build-prod:
-	GDOS=linux GOARCH=arm RELEASE=prod make build
+	GOOS=linux GOARCH=arm RELEASE=prod make build
 
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
