@@ -2,28 +2,40 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
-	//"syscall"
+
 	"github.com/edgebox-iot/sysctl/internal/diagnostics"
-	"fmt"
+	"github.com/edgebox-iot/sysctl/internal/tasks"
+	"github.com/edgebox-iot/sysctl/internal/utils"
 )
+
+const defaultNotReadySleepTime time.Duration = time.Second * 60
+const defaultSleepTime time.Duration = time.Second
 
 func main() {
 
 	// load command line arguments
 
 	version := flag.Bool("version", false, "Get the version info")
-	name := flag.String("name", "edgebox", "name for the service")
+	db := flag.Bool("database", false, "Get database connection info")
+	name := flag.String("name", "edgebox", "Name for the service")
 
 	flag.Parse()
 
 	if *version {
 		printVersion()
 		os.Exit(0)
-	} 
+	}
+
+	if *db {
+		printDbDetails()
+		os.Exit(0)
+	}
 
 	log.Printf("Starting Sysctl service for %s", *name)
 
@@ -31,7 +43,7 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 
 	// catch all signals since not explicitly listing
-	signal.Notify(sigs)
+	signal.Notify(sigs, syscall.SIGQUIT)
 
 	// Cathing specific signals can be done with:
 	//signal.Notify(sigs,syscall.SIGQUIT)
@@ -44,15 +56,25 @@ func main() {
 		os.Exit(1)
 	}()
 
+	printVersion()
+
+	printDbDetails()
+
+	tick := 0
+
 	// infinite loop
 	for {
 
-		log.Printf("Executing instruction %s", *name)
+		if isSystemReady() {
+			tick++ // Tick is an int, so eventually will "go out of ticks?" Maybe we want to reset the ticks every once in a while, to avoid working with big numbers...
+			systemIterator(name, tick)
+		} else {
+			// Wait about 60 seconds before trying again.
+			log.Printf("System not ready. Next try will be executed in 60 seconds")
+			time.Sleep(defaultNotReadySleepTime)
+		}
+		
 
-		// wait random number of milliseconds
-		Nsecs := 1000
-		log.Printf("Next instruction executed in %dms", Nsecs)
-		time.Sleep(time.Millisecond * time.Duration(Nsecs))
 	}
 
 }
@@ -64,7 +86,44 @@ func appCleanup() {
 
 func printVersion() {
 	fmt.Printf(
-		"version: %s\ncommit: %s\nbuild time: %s",
+		"\nversion: %s\ncommit: %s\nbuild time: %s\n",
 		diagnostics.Version, diagnostics.Commit, diagnostics.BuildDate,
 	)
+}
+
+func printDbDetails() {
+	fmt.Printf(
+		"\n\nDatabase Connection Information:\n %s\n\n",
+		utils.GetMySQLDbConnectionDetails(),
+	)
+}
+
+// IsSystemReady : Checks hability of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
+func isSystemReady() bool {
+	_, err := os.Stat("/home/system/components/ws/.ready")
+	return !os.IsNotExist(err)
+}
+
+// IsDatabaseReady : Checks is it can successfully connect to the task queue db
+func isDatabaseReady() bool {
+	return false
+}
+
+func systemIterator(name *string, tick int) {
+
+	log.Printf("Tick is %d", tick)
+	
+	tasks.ExecuteSchedules(tick)
+	nextTask := tasks.GetNextTask()
+	if nextTask.Task != "" {
+		log.Printf("Executing task %s / Args: %s", nextTask.Task, nextTask.Args)
+		tasks.ExecuteTask(nextTask)
+	} else {
+		log.Printf("No tasks to execute.")
+	}
+
+	// Wait about 1 second before resumming operations.
+	log.Printf("Next instruction will be executed 1 second")
+	time.Sleep(defaultSleepTime)
+
 }

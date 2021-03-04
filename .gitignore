@@ -6,6 +6,9 @@
 *.dylib
 main
 
+# Local .env file for overwriting info when doing local dev.
+.env
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -18,3 +21,6 @@ main
 # Build
 
 /bin
+
+# Go Sum files
+*.sum
