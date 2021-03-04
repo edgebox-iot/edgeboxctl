@@ -201,11 +201,12 @@ func GetEdgeAppStatus(ID string) EdgeAppStatus {
 	// - No service running = EdgeApp is off
 
 	runningServices := 0
-	status := EdgeAppStatus{-1, "not-installed"}
+	
+	status := EdgeAppStatus{0, "off"}
 
 	if !IsEdgeAppInstalled(ID) {
 
-		status = EdgeAppStatus{0, "off"}
+		status = EdgeAppStatus{-1, "not-installed"}
 
 	} else {
 
