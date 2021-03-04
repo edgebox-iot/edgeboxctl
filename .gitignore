@@ -21,6 +21,3 @@ main
 # Build
 
 /bin
-
-# Go Sum files
-*.sum
