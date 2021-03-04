@@ -1,4 +1,4 @@
-PROJECT?=github.com/edgebox-iot/sysctl
+PROJECT?=github.com/edgebox-iot/edgeboxctl
 
 RELEASE ?= dev
 COMMIT := $(shell git rev-parse --short HEAD)
@@ -18,7 +18,7 @@ build:
 		-trimpath -ldflags "-s -w -X ${PROJECT}/internal/diagnostics.Version=${RELEASE} \
 		-X ${PROJECT}/internal/diagnostics.Commit=${COMMIT} \
 		-X ${PROJECT}/internal/diagnostics.BuildDate=${BUILD_DATE}" \
-		-o bin/sysctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/edgeboxctl
+		-o bin/edgeboxctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/edgeboxctl
 	cp ./bin/edgeboxctl-${GOOS}-${GOARCH} ./bin/edgeboxctl
 
 clean:
