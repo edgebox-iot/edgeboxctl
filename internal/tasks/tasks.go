@@ -283,6 +283,8 @@ func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
 
 	fmt.Println("Executing taskRemoveEdgeApp for " + args.ID)
 
+	// Making sure the application is stopped before setting it as removed.
+	edgeapps.StopEdgeApp(args.ID)
 	result := edgeapps.SetEdgeAppNotInstalled(args.ID)
 
 	resultJSON, _ := json.Marshal(result)
