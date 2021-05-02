@@ -11,6 +11,7 @@ import (
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
+	_ "github.com/mattn/go-sqlite3"    // SQlite Driver
 )
 
 // Task : Struct for Task type
@@ -60,7 +61,7 @@ type taskDisableOnlineArgs struct {
 func GetNextTask() Task {
 
 	// Will try to connect to API database, which should be running locally under WS.
-	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
 
 	// if there is an error opening the connection, handle it
 	if err != nil {
@@ -71,7 +72,7 @@ func GetNextTask() Task {
 	defer db.Close()
 
 	// perform a db.Query insert
-	results, err := db.Query("SELECT * FROM tasks WHERE status = 0 ORDER BY created ASC LIMIT 1;")
+	results, err := db.Query("SELECT * FROM task WHERE status = 0 ORDER BY created ASC LIMIT 1;")
 
 	// if there is an error inserting, handle it
 	if err != nil {
@@ -99,7 +100,7 @@ func GetNextTask() Task {
 // ExecuteTask : Performs execution of the given task, updating the task status as it goes, and publishing the task result
 func ExecuteTask(task Task) Task {
 
-	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
 
 	if err != nil {
 		panic(err.Error())
@@ -107,7 +108,7 @@ func ExecuteTask(task Task) Task {
 
 	defer db.Close()
 
-	_, err = db.Query("UPDATE tasks SET status = 1 WHERE ID = " + strconv.Itoa(task.ID))
+	_, err = db.Query("UPDATE task SET status = 1 WHERE ID = " + strconv.Itoa(task.ID))
 
 	if err != nil {
 		panic(err.Error())
@@ -144,7 +145,6 @@ func ExecuteTask(task Task) Task {
 
 		case "remove_edgeapp":
 
-			
 			log.Println("Removing EdgeApp...")
 			var args taskRemoveEdgeAppArgs
 			err := json.Unmarshal([]byte(task.Args), &args)
@@ -208,9 +208,9 @@ func ExecuteTask(task Task) Task {
 	}
 
 	if task.Result.Valid {
-		db.Query("Update tasks SET status = 2, result = '" + task.Result.String + "' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+		db.Query("Update task SET status = 2, result = '" + task.Result.String + "' WHERE ID = " + strconv.Itoa(task.ID) + ";")
 	} else {
-		db.Query("Update tasks SET status = 3, result = 'Error' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+		db.Query("Update task SET status = 3, result = 'Error' WHERE ID = " + strconv.Itoa(task.ID) + ";")
 	}
 
 	if err != nil {
@@ -276,7 +276,6 @@ func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
 
 	return string(resultJSON)
 
-
 }
 
 func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
@@ -292,7 +291,6 @@ func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
 	taskGetEdgeApps()
 
 	return string(resultJSON)
-
 
 }
 
@@ -359,7 +357,7 @@ func taskGetEdgeApps() string {
 	edgeApps := edgeapps.GetEdgeApps()
 	edgeAppsJSON, _ := json.Marshal(edgeApps)
 
-	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
 
 	if err != nil {
 		panic(err.Error())
@@ -367,7 +365,7 @@ func taskGetEdgeApps() string {
 
 	defer db.Close()
 
-	_, err = db.Query("REPLACE into options (name, value) VALUES ('EDGEAPPS_LIST','" + string(edgeAppsJSON) + "');")
+	_, err = db.Query("REPLACE into option (name, value) VALUES ('EDGEAPPS_LIST','" + string(edgeAppsJSON) + "');")
 
 	if err != nil {
 		panic(err.Error())

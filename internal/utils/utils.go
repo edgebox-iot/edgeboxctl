@@ -82,6 +82,20 @@ func GetMySQLDbConnectionDetails() string {
 
 }
 
+// GetSQLiteDbConnectionDetails : Returns the necessary string as connection info for SQL.db()
+func GetSQLiteDbConnectionDetails() string {
+
+	var apiEnv map[string]string
+	apiEnv, err := godotenv.Read(GetPath("apiEnvFileLocation"))
+
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	return apiEnv["SQLITE_DATABASE"] // Will read from api project edgebox.env file
+
+}
+
 // GetPath : Returns either the hardcoded path, or a overwritten value via .env file at project root. Register paths here for seamless working code between dev and prod environments ;)
 func GetPath(pathKey string) string {
 
