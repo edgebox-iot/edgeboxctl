@@ -68,10 +68,6 @@ func GetNextTask() Task {
 		panic(err.Error())
 	}
 
-	// defer the close till after the main function has finished executing
-	defer db.Close()
-
-	// perform a db.Query insert
 	results, err := db.Query("SELECT * FROM task WHERE status = 0 ORDER BY created ASC LIMIT 1;")
 
 	// if there is an error inserting, handle it
@@ -90,8 +86,8 @@ func GetNextTask() Task {
 		}
 	}
 
-	// be careful deferring Queries if you are using transactions
-	defer results.Close()
+	results.Close()
+	db.Close()
 
 	return task
 
@@ -106,12 +102,14 @@ func ExecuteTask(task Task) Task {
 		panic(err.Error())
 	}
 
-	defer db.Close()
-
-	_, err = db.Query("UPDATE task SET status = 1 WHERE ID = " + strconv.Itoa(task.ID))
-
+	statement, err := db.Prepare("UPDATE task SET status = ?, updated = ? WHERE ID = ?") // Prepare SQL Statement
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err.Error())
+	}
+
+	_, err = statement.Exec(1, "datetime('now')", strconv.Itoa(task.ID)) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
 	if diagnostics.Version == "dev" {
@@ -207,15 +205,32 @@ func ExecuteTask(task Task) Task {
 
 	}
 
+	statement, err = db.Prepare("Update task SET status = 2, result = '" + task.Result.String + "', updated = datetime('now') WHERE ID = " + strconv.Itoa(task.ID) + ";") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	if task.Result.Valid {
-		db.Query("Update task SET status = 2, result = '" + task.Result.String + "' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+		_, err = statement.Exec(2, task.Result.String, "datetime('now')", strconv.Itoa(task.ID)) // Execute SQL Statement with result info
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
 	} else {
-		db.Query("Update task SET status = 3, result = 'Error' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+		_, err = statement.Exec(3, "Error", "datetime('now')", strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 	}
 
 	if err != nil {
 		panic(err.Error())
 	}
+
+	db.Close()
 
 	returnTask := task
 
@@ -360,16 +375,20 @@ func taskGetEdgeApps() string {
 	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
 
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err.Error())
 	}
 
-	defer db.Close()
-
-	_, err = db.Query("REPLACE into option (name, value) VALUES ('EDGEAPPS_LIST','" + string(edgeAppsJSON) + "');")
-
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err.Error())
 	}
+
+	_, err = statement.Exec("EDGEAPPS_LIST", string(edgeAppsJSON), "datetime('now')", "datetime('now')") // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
 
 	return string(edgeAppsJSON)
 
