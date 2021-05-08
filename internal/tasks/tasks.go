@@ -102,7 +102,7 @@ func ExecuteTask(task Task) Task {
 		panic(err.Error())
 	}
 
-	statement, err := db.Prepare("UPDATE task SET status = ?, updated = ? WHERE ID = ?") // Prepare SQL Statement
+	statement, err := db.Prepare("UPDATE task SET status = ?, updated = ? WHERE ID = ?;") // Prepare SQL Statement
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -205,7 +205,7 @@ func ExecuteTask(task Task) Task {
 
 	}
 
-	statement, err = db.Prepare("Update task SET status = 2, result = '" + task.Result.String + "', updated = datetime('now') WHERE ID = " + strconv.Itoa(task.ID) + ";") // Prepare SQL Statement
+	statement, err = db.Prepare("Update task SET status = ?, result = ?, updated = ? WHERE ID = ?;") // Prepare SQL Statement
 	if err != nil {
 		log.Fatal(err.Error())
 	}
