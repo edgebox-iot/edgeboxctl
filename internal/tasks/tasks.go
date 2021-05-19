@@ -18,7 +18,7 @@ import (
 type Task struct {
 	ID      int            `json:"id"`
 	Task    string         `json:"task"`
-	Args    string         `json:"args"`
+	Args    sql.NullString `json:"args"` // Database fields that can be null must use the sql.NullString type
 	Status  string         `json:"status"`
 	Result  sql.NullString `json:"result"` // Database fields that can be null must use the sql.NullString type
 	Created string         `json:"created"`
@@ -121,7 +121,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Setting up bootnode connection...")
 			var args taskSetupTunnelArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of setup_bootnode task: %s", err)
 			} else {
@@ -133,7 +133,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Installing EdgeApp...")
 			var args taskInstallEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of install_edgeapp task: %s", err)
 			} else {
@@ -145,7 +145,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Removing EdgeApp...")
 			var args taskRemoveEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of remove_edgeapp task: %s", err)
 			} else {
@@ -157,7 +157,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Starting EdgeApp...")
 			var args taskStartEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of start_edgeapp task: %s", err)
 			} else {
@@ -169,7 +169,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Stopping EdgeApp...")
 			var args taskStopEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of stop_edgeapp task: %s", err)
 			} else {
@@ -181,7 +181,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Enabling online access to EdgeApp...")
 			var args taskEnableOnlineArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of enable_online task: %s", err)
 			} else {
@@ -193,7 +193,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Disabling online access to EdgeApp...")
 			var args taskDisableOnlineArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of enable_online task: %s", err)
 			} else {
