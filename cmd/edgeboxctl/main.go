@@ -115,7 +115,11 @@ func systemIterator(name *string, tick int) {
 	tasks.ExecuteSchedules(tick)
 	nextTask := tasks.GetNextTask()
 	if nextTask.Task != "" {
-		log.Printf("Executing task %s / Args: %s", nextTask.Task, nextTask.Args)
+		taskArguments := "No arguments"
+		if nextTask.Args.Valid {
+			taskArguments = nextTask.Args.String
+		}
+		log.Printf("Executing task %s / Args: %s", nextTask.Task, taskArguments)
 		tasks.ExecuteTask(nextTask)
 	} else {
 		log.Printf("No tasks to execute.")
