@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
@@ -107,7 +108,9 @@ func ExecuteTask(task Task) Task {
 		log.Fatal(err.Error())
 	}
 
-	_, err = statement.Exec(1, "datetime('now')", strconv.Itoa(task.ID)) // Execute SQL Statement
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec(1, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -213,14 +216,16 @@ func ExecuteTask(task Task) Task {
 		log.Fatal(err.Error())
 	}
 
+	formatedDatetime = utils.GetSQLiteFormattedDateTime(time.Now())
+
 	if task.Result.Valid {
-		_, err = statement.Exec(2, task.Result.String, "datetime('now')", strconv.Itoa(task.ID)) // Execute SQL Statement with result info
+		_, err = statement.Exec(2, task.Result.String, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with result info
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 
 	} else {
-		_, err = statement.Exec(3, "Error", "datetime('now')", strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
+		_, err = statement.Exec(3, "Error", formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -383,7 +388,9 @@ func taskGetEdgeApps() string {
 		log.Fatal(err.Error())
 	}
 
-	_, err = statement.Exec("EDGEAPPS_LIST", string(edgeAppsJSON), "datetime('now')", "datetime('now')") // Execute SQL Statement
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec("EDGEAPPS_LIST", string(edgeAppsJSON), formatedDatetime, formatedDatetime) // Execute SQL Statement
 	if err != nil {
 		log.Fatal(err.Error())
 	}

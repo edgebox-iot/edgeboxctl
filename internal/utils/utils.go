@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -94,6 +95,15 @@ func GetSQLiteDbConnectionDetails() string {
 
 	return apiEnv["SQLITE_DATABASE"] // Will read from api project edgebox.env file
 
+}
+
+// GetSQLiteFormattedDateTime: Given a Time, Returns a string that is formatted ready to be inserted into an SQLite Datetime field using sql.Prepare.
+func GetSQLiteFormattedDateTime(t time.Time) string {
+	// This date is used to indicate the layout.
+	const datetimeLayout = "2006-01-02 15:04:05"
+	formatedDatetime := t.Format(datetimeLayout)
+
+	return formatedDatetime
 }
 
 // GetPath : Returns either the hardcoded path, or a overwritten value via .env file at project root. Register paths here for seamless working code between dev and prod environments ;)
