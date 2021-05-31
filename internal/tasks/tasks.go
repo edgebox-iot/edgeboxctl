@@ -10,6 +10,7 @@ import (
 
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
+	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 	_ "github.com/mattn/go-sqlite3"    // SQlite Driver
@@ -247,8 +248,13 @@ func ExecuteTask(task Task) Task {
 func ExecuteSchedules(tick int) {
 
 	if tick == 1 {
+
 		// Executing on startup (first tick). Schedules run before tasks in the SystemIterator
+		uptime := taskGetSystemUptime()
+		log.Println("Uptime is " + uptime + " seconds (" + system.GetUptimeFormatted() + ")")
+
 		log.Println(taskGetEdgeApps())
+
 	}
 
 	if tick%30 == 0 {
@@ -398,5 +404,34 @@ func taskGetEdgeApps() string {
 	db.Close()
 
 	return string(edgeAppsJSON)
+
+}
+
+func taskGetSystemUptime() string {
+	fmt.Println("Executing taskGetSystemUptime")
+
+	uptime := system.GetUptimeInSeconds()
+
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec("SYSTEM_UPTIME", uptime, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+
+	return uptime
 
 }
