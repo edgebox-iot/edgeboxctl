@@ -16,6 +16,7 @@ import (
 type EdgeApp struct {
 	ID                 string           `json:"id"`
 	Name               string           `json:"name"`
+	Description        string           `json:"description"`
 	Status             EdgeAppStatus    `json:"status"`
 	Services           []EdgeAppService `json:"services"`
 	InternetAccessible bool             `json:"internet_accessible"`
@@ -60,6 +61,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 		// File exists. Start digging!
 
 		edgeAppName := ID
+		edgeAppDescription := ""
 
 		edgeAppEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + ID + envFilename)
 
@@ -68,6 +70,9 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 		} else {
 			if edgeAppEnv["EDGEAPP_NAME"] != "" {
 				edgeAppName = edgeAppEnv["EDGEAPP_NAME"]
+			}
+			if edgeAppEnv["EDGEAPP_DESCRIPTION"] != "" {
+				edgeAppDescription = edgeAppEnv["EDGEAPP_DESCRIPTION"]
 			}
 		}
 
@@ -88,6 +93,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 			EdgeApp: EdgeApp{
 				ID:                 ID,
 				Name:               edgeAppName,
+				Description:        edgeAppDescription,
 				Status:             GetEdgeAppStatus(ID),
 				Services:           GetEdgeAppServices(ID),
 				InternetAccessible: edgeAppInternetAccessible,
@@ -123,7 +129,6 @@ func SetEdgeAppInstalled(ID string) bool {
 	_, err := os.Stat(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
 	if os.IsNotExist(err) {
 
-
 		_, err := os.Create(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
 		result = true
 
@@ -133,7 +138,6 @@ func SetEdgeAppInstalled(ID string) bool {
 		}
 
 		buildFrameworkContainers()
-
 
 	} else {
 
@@ -151,9 +155,9 @@ func SetEdgeAppNotInstalled(ID string) bool {
 	result := true
 	err := os.Remove(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
 	if err != nil {
-		result = false 
-        log.Fatal(err) 
-    }
+		result = false
+		log.Fatal(err)
+	}
 
 	buildFrameworkContainers()
 
@@ -201,7 +205,7 @@ func GetEdgeAppStatus(ID string) EdgeAppStatus {
 	// - No service running = EdgeApp is off
 
 	runningServices := 0
-	
+
 	status := EdgeAppStatus{0, "off"}
 
 	if !IsEdgeAppInstalled(ID) {
