@@ -6,18 +6,21 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
+	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
+	_ "github.com/mattn/go-sqlite3"    // SQlite Driver
 )
 
 // Task : Struct for Task type
 type Task struct {
 	ID      int            `json:"id"`
 	Task    string         `json:"task"`
-	Args    string         `json:"args"`
+	Args    sql.NullString `json:"args"` // Database fields that can be null must use the sql.NullString type
 	Status  string         `json:"status"`
 	Result  sql.NullString `json:"result"` // Database fields that can be null must use the sql.NullString type
 	Created string         `json:"created"`
@@ -60,18 +63,14 @@ type taskDisableOnlineArgs struct {
 func GetNextTask() Task {
 
 	// Will try to connect to API database, which should be running locally under WS.
-	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
 
 	// if there is an error opening the connection, handle it
 	if err != nil {
 		panic(err.Error())
 	}
 
-	// defer the close till after the main function has finished executing
-	defer db.Close()
-
-	// perform a db.Query insert
-	results, err := db.Query("SELECT * FROM tasks WHERE status = 0 ORDER BY created ASC LIMIT 1;")
+	results, err := db.Query("SELECT * FROM task WHERE status = 0 ORDER BY created ASC LIMIT 1;")
 
 	// if there is an error inserting, handle it
 	if err != nil {
@@ -89,8 +88,8 @@ func GetNextTask() Task {
 		}
 	}
 
-	// be careful deferring Queries if you are using transactions
-	defer results.Close()
+	results.Close()
+	db.Close()
 
 	return task
 
@@ -99,18 +98,22 @@ func GetNextTask() Task {
 // ExecuteTask : Performs execution of the given task, updating the task status as it goes, and publishing the task result
 func ExecuteTask(task Task) Task {
 
-	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
 
 	if err != nil {
 		panic(err.Error())
 	}
 
-	defer db.Close()
-
-	_, err = db.Query("UPDATE tasks SET status = 1 WHERE ID = " + strconv.Itoa(task.ID))
-
+	statement, err := db.Prepare("UPDATE task SET status = ?, updated = ? WHERE ID = ?;") // Prepare SQL Statement
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec(1, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
 	if diagnostics.Version == "dev" {
@@ -122,7 +125,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Setting up bootnode connection...")
 			var args taskSetupTunnelArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of setup_bootnode task: %s", err)
 			} else {
@@ -134,7 +137,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Installing EdgeApp...")
 			var args taskInstallEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of install_edgeapp task: %s", err)
 			} else {
@@ -144,10 +147,9 @@ func ExecuteTask(task Task) Task {
 
 		case "remove_edgeapp":
 
-			
 			log.Println("Removing EdgeApp...")
 			var args taskRemoveEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of remove_edgeapp task: %s", err)
 			} else {
@@ -159,7 +161,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Starting EdgeApp...")
 			var args taskStartEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of start_edgeapp task: %s", err)
 			} else {
@@ -171,7 +173,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Stopping EdgeApp...")
 			var args taskStopEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of stop_edgeapp task: %s", err)
 			} else {
@@ -183,7 +185,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Enabling online access to EdgeApp...")
 			var args taskEnableOnlineArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of enable_online task: %s", err)
 			} else {
@@ -195,7 +197,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Disabling online access to EdgeApp...")
 			var args taskDisableOnlineArgs
-			err := json.Unmarshal([]byte(task.Args), &args)
+			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
 				log.Printf("Error reading arguments of enable_online task: %s", err)
 			} else {
@@ -207,15 +209,34 @@ func ExecuteTask(task Task) Task {
 
 	}
 
+	statement, err = db.Prepare("Update task SET status = ?, result = ?, updated = ? WHERE ID = ?;") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime = utils.GetSQLiteFormattedDateTime(time.Now())
+
 	if task.Result.Valid {
-		db.Query("Update tasks SET status = 2, result = '" + task.Result.String + "' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+		_, err = statement.Exec(2, task.Result.String, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with result info
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
 	} else {
-		db.Query("Update tasks SET status = 3, result = 'Error' WHERE ID = " + strconv.Itoa(task.ID) + ";")
+		_, err = statement.Exec(3, "Error", formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 	}
 
 	if err != nil {
 		panic(err.Error())
 	}
+
+	db.Close()
 
 	returnTask := task
 
@@ -227,8 +248,13 @@ func ExecuteTask(task Task) Task {
 func ExecuteSchedules(tick int) {
 
 	if tick == 1 {
+
 		// Executing on startup (first tick). Schedules run before tasks in the SystemIterator
+		uptime := taskGetSystemUptime()
+		log.Println("Uptime is " + uptime + " seconds (" + system.GetUptimeFormatted() + ")")
+
 		log.Println(taskGetEdgeApps())
+
 	}
 
 	if tick%30 == 0 {
@@ -276,7 +302,6 @@ func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
 
 	return string(resultJSON)
 
-
 }
 
 func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
@@ -292,7 +317,6 @@ func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
 	taskGetEdgeApps()
 
 	return string(resultJSON)
-
 
 }
 
@@ -359,20 +383,55 @@ func taskGetEdgeApps() string {
 	edgeApps := edgeapps.GetEdgeApps()
 	edgeAppsJSON, _ := json.Marshal(edgeApps)
 
-	db, err := sql.Open("mysql", utils.GetMySQLDbConnectionDetails())
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
 
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err.Error())
 	}
 
-	defer db.Close()
-
-	_, err = db.Query("REPLACE into options (name, value) VALUES ('EDGEAPPS_LIST','" + string(edgeAppsJSON) + "');")
-
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err.Error())
 	}
+
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec("EDGEAPPS_LIST", string(edgeAppsJSON), formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
 
 	return string(edgeAppsJSON)
+
+}
+
+func taskGetSystemUptime() string {
+	fmt.Println("Executing taskGetSystemUptime")
+
+	uptime := system.GetUptimeInSeconds()
+
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec("SYSTEM_UPTIME", uptime, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+
+	return uptime
 
 }

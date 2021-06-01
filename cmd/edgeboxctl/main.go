@@ -73,7 +73,6 @@ func main() {
 			log.Printf("System not ready. Next try will be executed in 60 seconds")
 			time.Sleep(defaultNotReadySleepTime)
 		}
-		
 
 	}
 
@@ -93,8 +92,8 @@ func printVersion() {
 
 func printDbDetails() {
 	fmt.Printf(
-		"\n\nDatabase Connection Information:\n %s\n\n",
-		utils.GetMySQLDbConnectionDetails(),
+		"\n\nSQLite Database Location:\n %s\n\n",
+		utils.GetSQLiteDbConnectionDetails(),
 	)
 }
 
@@ -112,11 +111,15 @@ func isDatabaseReady() bool {
 func systemIterator(name *string, tick int) {
 
 	log.Printf("Tick is %d", tick)
-	
+
 	tasks.ExecuteSchedules(tick)
 	nextTask := tasks.GetNextTask()
 	if nextTask.Task != "" {
-		log.Printf("Executing task %s / Args: %s", nextTask.Task, nextTask.Args)
+		taskArguments := "No arguments"
+		if nextTask.Args.Valid {
+			taskArguments = nextTask.Args.String
+		}
+		log.Printf("Executing task %s / Args: %s", nextTask.Task, taskArguments)
 		tasks.ExecuteTask(nextTask)
 	} else {
 		log.Printf("No tasks to execute.")
