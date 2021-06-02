@@ -70,7 +70,7 @@ func GetNextTask() Task {
 		panic(err.Error())
 	}
 
-	results, err := db.Query("SELECT * FROM task WHERE status = 0 ORDER BY created ASC LIMIT 1;")
+	results, err := db.Query("SELECT id, task, args, status, result, created, updated FROM task WHERE status = 0 ORDER BY created ASC LIMIT 1;")
 
 	// if there is an error inserting, handle it
 	if err != nil {
