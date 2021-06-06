@@ -10,6 +10,7 @@ import (
 
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
+	"github.com/edgebox-iot/edgeboxctl/internal/storage"
 	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
@@ -253,12 +254,14 @@ func ExecuteSchedules(tick int) {
 		uptime := taskGetSystemUptime()
 		log.Println("Uptime is " + uptime + " seconds (" + system.GetUptimeFormatted() + ")")
 
+		log.Println(taskGetStorageDevices())
 		log.Println(taskGetEdgeApps())
 
 	}
 
 	if tick%30 == 0 {
 		// Executing every 30 ticks
+		log.Println(taskGetStorageDevices())
 		log.Println(taskGetEdgeApps())
 
 	}
@@ -433,5 +436,35 @@ func taskGetSystemUptime() string {
 	db.Close()
 
 	return uptime
+
+}
+
+func taskGetStorageDevices() string {
+	fmt.Println("Executing taskGetStorageDevices")
+
+	devices := storage.GetDevices()
+	devicesJSON, _ := json.Marshal(devices)
+
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec("STORAGE_DEVICES_LIST", devicesJSON, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+
+	return string(devicesJSON)
 
 }
