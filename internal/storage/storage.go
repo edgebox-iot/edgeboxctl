@@ -13,6 +13,7 @@ type Device struct {
 	ID         string       `json:"id"`
 	Name       string       `json:"name"`
 	Size       string       `json:"size"`
+	InUse      bool         `json:"in_use"`
 	MainDevice bool         `json:"main_device"`
 	MAJ        string       `json:"maj"`
 	MIN        string       `json:"min"`
@@ -74,6 +75,7 @@ func GetDevices() []Device {
 	var currentPartitions []Partition
 
 	firstDevice := true
+	currentDeviceInUseFlag := false
 
 	for scanner.Scan() {
 		// 1 Device is represented here. Extract words in order for filling a Device struct
@@ -95,6 +97,8 @@ func GetDevices() []Device {
 			if !firstDevice {
 				fmt.Println("Appending finalized device info to list")
 				currentDevice.Partitions = currentPartitions
+				currentDevice.InUse = currentDeviceInUseFlag
+				currentDeviceInUseFlag = false
 				currentPartitions = []Partition{}
 				devices = append(devices, currentDevice)
 			} else {
@@ -127,8 +131,9 @@ func GetDevices() []Device {
 			fmt.Println("Processing Partition")
 
 			mountpoint := ""
-			if len(deviceRawInfo) > 7 {
-				mountpoint = deviceRawInfo[7]
+			if len(deviceRawInfo) >= 7 {
+				mountpoint = deviceRawInfo[6]
+				currentDeviceInUseFlag = true
 			}
 
 			// It is a partition, part of the last device read.
@@ -149,6 +154,8 @@ func GetDevices() []Device {
 
 	}
 
+	currentDevice.Partitions = currentPartitions
+	currentDevice.InUse = currentDeviceInUseFlag
 	devices = append([]Device{currentDevice}, devices...) // Prepending the first device...
 
 	return devices
