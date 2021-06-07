@@ -3,7 +3,8 @@ package storage
 import (
 	"bufio"
 	"fmt"
-	"strconv"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
@@ -23,6 +24,7 @@ type Device struct {
 	RO         string       `json:"ro"`
 	Partitions []Partition  `json:"partitions"`
 	Status     DeviceStatus `json:"status"`
+	UsageStat  UsageStat    `json:"usage_stat"`
 }
 
 // DeviceStatus : Struct representing possible storage device statuses (code + description)
@@ -38,10 +40,18 @@ type MaybeDevice struct {
 }
 
 type UsageStat struct {
-	Total   string `json:"total"`
-	Used    string `json:"used"`
-	Free    string `json:"free"`
-	Percent string `json:"percent"`
+	Total      uint64     `json:"total"`
+	Used       uint64     `json:"used"`
+	Free       uint64     `json:"free"`
+	Percent    string     `json:"percent"`
+	UsageSplit UsageSplit `json:"usage_split"`
+}
+
+type UsageSplit struct {
+	OS       uint64 `json:"os"`
+	EdgeApps uint64 `json:"edgeapps"`
+	Buckets  uint64 `json:"buckets"`
+	Others   uint64 `json:"others"`
 }
 
 // Partition : Struct representing a partition / filesystem (Empty Mountpoint means it is not mounted)
@@ -172,6 +182,8 @@ func getDevicesSpaceUsage(devices []Device) []Device {
 
 		if device.InUse {
 
+			deviceUsageStat := UsageStat{}
+
 			for partitionIndex, partition := range device.Partitions {
 
 				s, _ := disk.Usage(partition.Mountpoint)
@@ -180,13 +192,68 @@ func getDevicesSpaceUsage(devices []Device) []Device {
 				}
 
 				partitionUsagePercent := fmt.Sprintf("%2.f%%", s.UsedPercent)
-				devices[deviceIndex].Partitions[partitionIndex].UsageStat = UsageStat{Total: strconv.FormatUint(s.Total, 10), Used: strconv.FormatUint(s.Used, 10), Free: strconv.FormatUint(s.Free, 10), Percent: partitionUsagePercent}
+
+				edgeappsDirSize, err := getDirSize(utils.GetPath("edgeAppsPath"))
+				// TODO for later: Figure out to get correct paths for each partition...
+				// wsAppDataDirSize, err := getDirSize("/home/system/components/ws/appdata")
+
+				edgeappsUsageSplit := (uint64)(0)
+				if partition.Mountpoint == "/" && err == nil {
+					// edgeappsUsageSplit = edgeappsDirSize + wsAppDataDirSize
+					edgeappsUsageSplit = edgeappsDirSize
+					deviceUsageStat.UsageSplit.EdgeApps += edgeappsUsageSplit
+				}
+
+				bucketsUsageSplit := (uint64)(0)
+				othersUsageSplit := (uint64)(0)
+				osUsageSplit := (s.Used - othersUsageSplit - bucketsUsageSplit - edgeappsUsageSplit)
+
+				partitionUsageSplit := UsageSplit{
+					OS:       osUsageSplit,
+					EdgeApps: edgeappsUsageSplit,
+					Buckets:  bucketsUsageSplit,
+					Others:   othersUsageSplit,
+				}
+
+				deviceUsageStat.Total = deviceUsageStat.Total + s.Total
+				deviceUsageStat.Used = deviceUsageStat.Used + s.Used
+				deviceUsageStat.Free = deviceUsageStat.Free + s.Free
+				deviceUsageStat.UsageSplit.OS = deviceUsageStat.UsageSplit.OS + osUsageSplit
+				deviceUsageStat.UsageSplit.EdgeApps = deviceUsageStat.UsageSplit.EdgeApps + edgeappsUsageSplit
+				deviceUsageStat.UsageSplit.Buckets = deviceUsageStat.UsageSplit.Buckets + bucketsUsageSplit
+				deviceUsageStat.UsageSplit.Others = deviceUsageStat.UsageSplit.Others + othersUsageSplit
+
+				devices[deviceIndex].Partitions[partitionIndex].UsageStat = UsageStat{
+					Total:      s.Total,
+					Used:       s.Used,
+					Free:       s.Free,
+					Percent:    partitionUsagePercent,
+					UsageSplit: partitionUsageSplit,
+				}
 
 			}
+
+			devices[deviceIndex].UsageStat = deviceUsageStat
+			totalDevicePercentUsage := fmt.Sprintf("%2.f%%", (float32(devices[deviceIndex].UsageStat.Used)/float32(devices[deviceIndex].UsageStat.Total))*100)
+			devices[deviceIndex].UsageStat.Percent = totalDevicePercentUsage
 
 		}
 
 	}
 
 	return devices
+}
+
+func getDirSize(path string) (uint64, error) {
+	var size uint64
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			size += (uint64)(info.Size())
+		}
+		return err
+	})
+	return size, err
 }
