@@ -74,7 +74,7 @@ func GetDevices() []Device {
 
 	var devices []Device
 
-	cmdArgs := []string{"--raw", "--noheadings"}
+	cmdArgs := []string{"--raw", "--bytes", "--noheadings"}
 	cmdOutput := utils.Exec("lsblk", cmdArgs)
 	cmdOutputReader := strings.NewReader(cmdOutput)
 	scanner := bufio.NewScanner(cmdOutputReader)
