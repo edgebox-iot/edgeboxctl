@@ -24,3 +24,6 @@ build:
 clean:
 	rm -rf ${BUILD_DIR}
 	go clean
+
+test:
+	go test -tags=unit -timeout=600s -v ./...
