@@ -161,7 +161,7 @@ func GetDevices() []Device {
 	currentDevice.InUse = currentDeviceInUseFlag
 	devices = append([]Device{currentDevice}, devices...) // Prepending the first device...
 
-	getDevicesSpaceUsage(devices)
+	devices = getDevicesSpaceUsage(devices)
 
 	return devices
 }
@@ -185,8 +185,6 @@ func getDevicesSpaceUsage(devices []Device) []Device {
 			}
 
 		}
-
-		fmt.Println(device)
 
 	}
 
