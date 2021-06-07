@@ -259,9 +259,13 @@ func ExecuteSchedules(tick int) {
 
 	}
 
+	if tick%5 == 0 {
+		// Executing every 5 ticks
+		log.Println(taskGetStorageDevices())
+	}
+
 	if tick%30 == 0 {
 		// Executing every 30 ticks
-		log.Println(taskGetStorageDevices())
 		log.Println(taskGetEdgeApps())
 
 	}

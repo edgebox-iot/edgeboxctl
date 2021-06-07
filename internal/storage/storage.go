@@ -186,49 +186,58 @@ func getDevicesSpaceUsage(devices []Device) []Device {
 
 			for partitionIndex, partition := range device.Partitions {
 
-				s, _ := disk.Usage(partition.Mountpoint)
-				if s.Total == 0 {
-					continue
-				}
+				if partition.Mountpoint != "" {
 
-				partitionUsagePercent := fmt.Sprintf("%2.f%%", s.UsedPercent)
+					s, _ := disk.Usage(partition.Mountpoint)
 
-				edgeappsDirSize, err := getDirSize(utils.GetPath("edgeAppsPath"))
-				// TODO for later: Figure out to get correct paths for each partition...
-				// wsAppDataDirSize, err := getDirSize("/home/system/components/ws/appdata")
+					if s.Total == 0 {
+						continue
+					}
 
-				edgeappsUsageSplit := (uint64)(0)
-				if partition.Mountpoint == "/" && err == nil {
-					// edgeappsUsageSplit = edgeappsDirSize + wsAppDataDirSize
-					edgeappsUsageSplit = edgeappsDirSize
-					deviceUsageStat.UsageSplit.EdgeApps += edgeappsUsageSplit
-				}
+					partitionUsagePercent := fmt.Sprintf("%2.f%%", s.UsedPercent)
+					osUsageSplit := (uint64)(0)
+					edgeappsUsageSplit := (uint64)(0)
+					bucketsUsageSplit := (uint64)(0)
+					othersUsageSplit := (uint64)(0)
 
-				bucketsUsageSplit := (uint64)(0)
-				othersUsageSplit := (uint64)(0)
-				osUsageSplit := (s.Used - othersUsageSplit - bucketsUsageSplit - edgeappsUsageSplit)
+					edgeappsDirSize, _ := getDirSize(utils.GetPath("edgeAppsPath"))
+					// TODO for later: Figure out to get correct paths for each partition...
+					wsAppDataDirSize, _ := getDirSize("/home/system/components/ws/appdata")
 
-				partitionUsageSplit := UsageSplit{
-					OS:       osUsageSplit,
-					EdgeApps: edgeappsUsageSplit,
-					Buckets:  bucketsUsageSplit,
-					Others:   othersUsageSplit,
-				}
+					if partition.Mountpoint == "/" {
+						edgeappsUsageSplit = edgeappsDirSize + wsAppDataDirSize
+						deviceUsageStat.UsageSplit.EdgeApps += edgeappsUsageSplit
+					}
 
-				deviceUsageStat.Total = deviceUsageStat.Total + s.Total
-				deviceUsageStat.Used = deviceUsageStat.Used + s.Used
-				deviceUsageStat.Free = deviceUsageStat.Free + s.Free
-				deviceUsageStat.UsageSplit.OS = deviceUsageStat.UsageSplit.OS + osUsageSplit
-				deviceUsageStat.UsageSplit.EdgeApps = deviceUsageStat.UsageSplit.EdgeApps + edgeappsUsageSplit
-				deviceUsageStat.UsageSplit.Buckets = deviceUsageStat.UsageSplit.Buckets + bucketsUsageSplit
-				deviceUsageStat.UsageSplit.Others = deviceUsageStat.UsageSplit.Others + othersUsageSplit
+					if device.MainDevice {
+						osUsageSplit = (s.Used - othersUsageSplit - bucketsUsageSplit - edgeappsUsageSplit)
+					} else {
+						othersUsageSplit = (s.Used - bucketsUsageSplit - edgeappsUsageSplit)
+					}
 
-				devices[deviceIndex].Partitions[partitionIndex].UsageStat = UsageStat{
-					Total:      s.Total,
-					Used:       s.Used,
-					Free:       s.Free,
-					Percent:    partitionUsagePercent,
-					UsageSplit: partitionUsageSplit,
+					partitionUsageSplit := UsageSplit{
+						OS:       osUsageSplit,
+						EdgeApps: edgeappsUsageSplit,
+						Buckets:  bucketsUsageSplit,
+						Others:   othersUsageSplit,
+					}
+
+					deviceUsageStat.Total = deviceUsageStat.Total + s.Total
+					deviceUsageStat.Used = deviceUsageStat.Used + s.Used
+					deviceUsageStat.Free = deviceUsageStat.Free + s.Free
+					deviceUsageStat.UsageSplit.OS = deviceUsageStat.UsageSplit.OS + osUsageSplit
+					deviceUsageStat.UsageSplit.EdgeApps = deviceUsageStat.UsageSplit.EdgeApps + edgeappsUsageSplit
+					deviceUsageStat.UsageSplit.Buckets = deviceUsageStat.UsageSplit.Buckets + bucketsUsageSplit
+					deviceUsageStat.UsageSplit.Others = deviceUsageStat.UsageSplit.Others + othersUsageSplit
+
+					devices[deviceIndex].Partitions[partitionIndex].UsageStat = UsageStat{
+						Total:      s.Total,
+						Used:       s.Used,
+						Free:       s.Free,
+						Percent:    partitionUsagePercent,
+						UsageSplit: partitionUsageSplit,
+					}
+
 				}
 
 			}
