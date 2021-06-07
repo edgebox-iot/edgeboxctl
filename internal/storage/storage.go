@@ -3,9 +3,11 @@ package storage
 import (
 	"bufio"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
+	"github.com/shirou/gopsutil/disk"
 )
 
 // Device : Struct representing a storage device in the system
@@ -35,30 +37,27 @@ type MaybeDevice struct {
 	Valid  bool   `json:"valid"`
 }
 
+type UsageStat struct {
+	Total   string `json:"total"`
+	Used    string `json:"used"`
+	Free    string `json:"free"`
+	Percent string `json:"percent"`
+}
+
 // Partition : Struct representing a partition / filesystem (Empty Mountpoint means it is not mounted)
 type Partition struct {
-	ID         string `json:"id"`
-	Size       string `json:"size"`
-	MAJ        string `json:"maj"`
-	MIN        string `json:"min"`
-	RM         string `json:"rm"`
-	RO         string `json:"ro"`
-	Filesystem string `json:"filesystem"`
-	Mountpoint string `json:"mountpoint"`
+	ID         string    `json:"id"`
+	Size       string    `json:"size"`
+	MAJ        string    `json:"maj"`
+	MIN        string    `json:"min"`
+	RM         string    `json:"rm"`
+	RO         string    `json:"ro"`
+	Filesystem string    `json:"filesystem"`
+	Mountpoint string    `json:"mountpoint"`
+	UsageStat  UsageStat `json:"usage_stat"`
 }
 
 const mainDiskID = "mmcblk0"
-
-func GetDevice() MaybeDevice {
-
-	result := MaybeDevice{
-		Device: Device{},
-		Valid:  false,
-	}
-
-	return result
-
-}
 
 // GetDevices : Returns a list of all available sotrage devices in structs filled with information
 func GetDevices() []Device {
@@ -89,20 +88,22 @@ func GetDevices() []Device {
 		}
 
 		if isDevice {
-			// Clean up on the last device being prepared. Append all partitions found and delete the currentPartitions list afterwards.
+			// Clean up on the latest device being prepared. Append all partitions found and delete the currentPartitions list afterwards.
 			// The first device found should not run the cleanup lines below
 
-			fmt.Println("Processing Device")
-
 			if !firstDevice {
-				fmt.Println("Appending finalized device info to list")
 				currentDevice.Partitions = currentPartitions
+
+				if !currentDeviceInUseFlag {
+					currentDevice.Status.ID = 0
+					currentDevice.Status.Description = "not configured"
+				}
+
 				currentDevice.InUse = currentDeviceInUseFlag
 				currentDeviceInUseFlag = false
 				currentPartitions = []Partition{}
 				devices = append(devices, currentDevice)
 			} else {
-				fmt.Println("First device, not appending to list")
 				firstDevice = false
 			}
 
@@ -127,8 +128,6 @@ func GetDevices() []Device {
 			currentDevice = device
 
 		} else {
-
-			fmt.Println("Processing Partition")
 
 			mountpoint := ""
 			if len(deviceRawInfo) >= 7 {
@@ -155,8 +154,41 @@ func GetDevices() []Device {
 	}
 
 	currentDevice.Partitions = currentPartitions
+	if !currentDeviceInUseFlag {
+		currentDevice.Status.ID = 0
+		currentDevice.Status.Description = "Not configured"
+	}
 	currentDevice.InUse = currentDeviceInUseFlag
 	devices = append([]Device{currentDevice}, devices...) // Prepending the first device...
+
+	getDevicesSpaceUsage(devices)
+
+	return devices
+}
+
+func getDevicesSpaceUsage(devices []Device) []Device {
+
+	for deviceIndex, device := range devices {
+
+		if device.InUse {
+
+			for partitionIndex, partition := range device.Partitions {
+
+				s, _ := disk.Usage(partition.Mountpoint)
+				if s.Total == 0 {
+					continue
+				}
+
+				partitionUsagePercent := fmt.Sprintf("%2.f%%", s.UsedPercent)
+				devices[deviceIndex].Partitions[partitionIndex].UsageStat = UsageStat{Total: strconv.FormatUint(s.Total, 10), Used: strconv.FormatUint(s.Used, 10), Free: strconv.FormatUint(s.Free, 10), Percent: partitionUsagePercent}
+
+			}
+
+		}
+
+		fmt.Println(device)
+
+	}
 
 	return devices
 }
