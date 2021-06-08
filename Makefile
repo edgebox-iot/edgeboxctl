@@ -27,3 +27,6 @@ clean:
 
 test:
 	go test -tags=unit -timeout=600s -v ./...
+
+test-with-coverage:
+	go test -tags=unit -timeout=600s -v ./... -coverprofile=coverage.out
