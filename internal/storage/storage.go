@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -75,10 +74,7 @@ func GetDevices() []Device {
 	var devices []Device
 
 	cmdArgs := []string{"--raw", "--bytes", "--noheadings"}
-	cmdOutput := utils.Exec("lsblk", cmdArgs)
-	cmdOutputReader := strings.NewReader(cmdOutput)
-	scanner := bufio.NewScanner(cmdOutputReader)
-	scanner.Split(bufio.ScanLines)
+	scanner := utils.ExecAndGetLines("lsblk", cmdArgs)
 
 	var currentDevice Device
 	var currentPartitions []Partition

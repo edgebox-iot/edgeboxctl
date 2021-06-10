@@ -1,12 +1,14 @@
 package utils
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -51,6 +53,15 @@ func Exec(command string, args []string) string {
 
 	return out.String()
 
+}
+
+func ExecAndGetLines(command string, args []string) *bufio.Scanner {
+	cmdOutput := Exec(command, args)
+	cmdOutputReader := strings.NewReader(cmdOutput)
+	scanner := bufio.NewScanner(cmdOutputReader)
+	scanner.Split(bufio.ScanLines)
+
+	return scanner
 }
 
 // DeleteEmptySlices : Given a string array, delete empty entries.
