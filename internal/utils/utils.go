@@ -55,6 +55,7 @@ func Exec(command string, args []string) string {
 
 }
 
+// Exec : Runs a terminal Command, returns the result as a *bufio.Scanner type, split in lines and ready to parse.
 func ExecAndGetLines(command string, args []string) *bufio.Scanner {
 	cmdOutput := Exec(command, args)
 	cmdOutputReader := strings.NewReader(cmdOutput)
