@@ -88,9 +88,15 @@ func GetDevices() []Device {
 		deviceRawInfo := strings.Fields(scanner.Text())
 		majMin := strings.SplitN(deviceRawInfo[1], ":", 2)
 
-		isDevice := true
+		isDevice := false
+		isPartition := false
 		if deviceRawInfo[5] == "part" {
 			isDevice = false
+			isPartition = true
+
+		} else if deviceRawInfo[5] == "disk" {
+			isDevice = true
+			isPartition = false
 		}
 
 		if isDevice {
@@ -133,7 +139,7 @@ func GetDevices() []Device {
 
 			currentDevice = device
 
-		} else {
+		} else if isPartition {
 
 			mountpoint := ""
 			if len(deviceRawInfo) >= 7 {
@@ -155,6 +161,8 @@ func GetDevices() []Device {
 
 			currentPartitions = append(currentPartitions, partition)
 
+		} else {
+			fmt.Println("Found device not compatible with Edgebox, ignoring.")
 		}
 
 	}
