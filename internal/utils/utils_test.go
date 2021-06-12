@@ -9,12 +9,12 @@ import (
 
 func TestExec(t *testing.T) {
 	testCommand := "echo"
-	testArguments := []string{"'Hello World'"}
+	testArguments := []string{"Hello World"}
 
 	result := Exec("/", testCommand, testArguments)
 
 	if result != "Hello World" {
-		t.Log("Expected 'Hellow World' but got ", result)
+		t.Log("Expected 'Hello World' but got ", result)
 		t.Fail()
 	}
 }
