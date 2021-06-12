@@ -30,6 +30,27 @@ func ExampleExecAndStream() {
 	// err:
 }
 
+func ExampleExecAndStreamExecutableNotFound() {
+	ExecAndStream("/", "testcommand", []string{"Hello"})
+	// Output:
+	// cmd.Run() failed with exec: "testcommand": executable file not found in $PATH
+	//
+	// out:
+	//
+	// err:
+}
+
+func ExampleExecAndStreamError() {
+	ExecAndStream("/", "man", []string{"Hello"})
+	// Output:
+	// cmd.Run() failed with exit status 16
+	//
+	// out:
+	//
+	// err:
+	// No manual entry for Hello
+}
+
 func TestExecAndGetLines(t *testing.T) {
 	testCommand := "echo"
 	testArguments := []string{"$'Line1\nLine2\nLine3'"}

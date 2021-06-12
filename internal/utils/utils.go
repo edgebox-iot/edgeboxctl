@@ -27,7 +27,7 @@ func ExecAndStream(path string, command string, args []string) {
 	err := cmd.Run()
 
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		fmt.Printf("cmd.Run() failed with %s\n", err)
 	}
 
 	outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
