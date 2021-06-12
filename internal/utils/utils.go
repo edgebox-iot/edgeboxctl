@@ -15,14 +15,14 @@ import (
 )
 
 // ExecAndStream : Runs a terminal command, but streams progress instead of outputting. Ideal for long lived process that need to be logged.
-func ExecAndStream(command string, args []string) {
+func ExecAndStream(path string, command string, args []string) {
 
 	cmd := exec.Command(command, args...)
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
-	cmd.Dir = GetPath("wsPath")
+	cmd.Dir = path
 
 	err := cmd.Run()
 
@@ -36,13 +36,13 @@ func ExecAndStream(command string, args []string) {
 }
 
 // Exec : Runs a terminal Command, catches and logs errors, returns the result.
-func Exec(command string, args []string) string {
+func Exec(path string, command string, args []string) string {
 	cmd := exec.Command(command, args...)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
-	cmd.Dir = GetPath("wsPath")
+	cmd.Dir = path
 	err := cmd.Run()
 	if err != nil {
 		// TODO: Deal with possibility of error in command, allow explicit error handling and return proper formatted stderr
@@ -56,8 +56,8 @@ func Exec(command string, args []string) string {
 }
 
 // Exec : Runs a terminal Command, returns the result as a *bufio.Scanner type, split in lines and ready to parse.
-func ExecAndGetLines(command string, args []string) *bufio.Scanner {
-	cmdOutput := Exec(command, args)
+func ExecAndGetLines(path string, command string, args []string) *bufio.Scanner {
+	cmdOutput := Exec(path, command, args)
 	cmdOutputReader := strings.NewReader(cmdOutput)
 	scanner := bufio.NewScanner(cmdOutputReader)
 	scanner.Split(bufio.ScanLines)
@@ -105,10 +105,10 @@ func GetPath(pathKey string) string {
 	// Read whole of .env file to map.
 	var env map[string]string
 	env, err := godotenv.Read()
-	targetPath := ""
+	var targetPath string
 
 	if err != nil {
-		fmt.Println("Project .env file not found withing project root. Using only hardcoded path variables.")
+		targetPath = ""
 	}
 
 	switch pathKey {

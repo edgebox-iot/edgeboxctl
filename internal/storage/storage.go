@@ -74,7 +74,7 @@ func GetDevices() []Device {
 	var devices []Device
 
 	cmdArgs := []string{"--raw", "--bytes", "--noheadings"}
-	scanner := utils.ExecAndGetLines("lsblk", cmdArgs)
+	scanner := utils.ExecAndGetLines("/", "lsblk", cmdArgs)
 
 	var currentDevice Device
 	var currentPartitions []Partition

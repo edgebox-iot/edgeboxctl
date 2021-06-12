@@ -284,13 +284,13 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 	fmt.Println("Executing taskSetupTunnel")
 
 	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress + ":8655", "--prefix", args.AssignedAddress}
-	utils.Exec("tinc-boot", cmdargs)
+	utils.Exec(utils.GetPath("wsPath"), "tinc-boot", cmdargs)
 
 	cmdargs = []string{"start", "tinc@dnet"}
-	utils.Exec("systemctl", cmdargs)
+	utils.Exec(utils.GetPath("wsPath"), "systemctl", cmdargs)
 
 	cmdargs = []string{"enable", "tinc@dnet"}
-	utils.Exec("systemctl", cmdargs)
+	utils.Exec(utils.GetPath("wsPath"), "systemctl", cmdargs)
 
 	output := "OK" // Better check / logging of command execution result.
 	return output
