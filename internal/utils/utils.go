@@ -51,7 +51,7 @@ func Exec(path string, command string, args []string) string {
 
 	// log.Println("Result: " + out.String()) // ... Silence ...
 
-	return strings.Trim(out.String(), " ")
+	return strings.Trim(out.String(), " \n")
 
 }
 
