@@ -11,7 +11,7 @@ func TestExec(t *testing.T) {
 	testCommand := "echo"
 	testArguments := []string{"'Hello World'"}
 
-	result := Exec(testCommand, testArguments)
+	result := Exec("/", testCommand, testArguments)
 
 	if result != "Hello World" {
 		t.Log("Expected 'Hellow World' but got ", result)
@@ -24,7 +24,7 @@ func TestExecAndGetLines(t *testing.T) {
 	testArguments := []string{"$'Line1\nLine2\nLine3'"}
 	var result []string
 
-	scanner := ExecAndGetLines(testCommand, testArguments)
+	scanner := ExecAndGetLines("/", testCommand, testArguments)
 
 	for scanner.Scan() {
 		result = append(result, scanner.Text())
