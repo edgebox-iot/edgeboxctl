@@ -86,6 +86,13 @@ func TestGetPath(t *testing.T) {
 	if result != "" {
 		t.Log("Expected empty result but got ", result)
 	}
+
+	validPathKey := "wsPath"
+	result = GetPath(validPathKey)
+	if result != "/home/system/components/ws/" {
+		t.Log("Expected /home/system/components/ws/ but got", result)
+		t.Fail()
+	}
 }
 
 func TestGetSQLiteFormattedDateTime(t *testing.T) {
