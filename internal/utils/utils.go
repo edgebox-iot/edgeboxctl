@@ -76,25 +76,6 @@ func DeleteEmptySlices(s []string) []string {
 	return r
 }
 
-// GetMySQLDbConnectionDetails : Returns the necessary string as connection info for SQL.db()
-func GetMySQLDbConnectionDetails() string {
-
-	var apiEnv map[string]string
-	apiEnv, err := godotenv.Read(GetPath("apiEnvFileLocation"))
-
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	Dbhost := "127.0.0.1:" + apiEnv["HOST_MACHINE_MYSQL_PORT"]
-	Dbname := apiEnv["MYSQL_DATABASE"]
-	Dbuser := apiEnv["MYSQL_USER"]
-	Dbpass := apiEnv["MYSQL_PASSWORD"]
-
-	return Dbuser + ":" + Dbpass + "@tcp(" + Dbhost + ")/" + Dbname
-
-}
-
 // GetSQLiteDbConnectionDetails : Returns the necessary string as connection info for SQL.db()
 func GetSQLiteDbConnectionDetails() string {
 
@@ -127,8 +108,7 @@ func GetPath(pathKey string) string {
 	targetPath := ""
 
 	if err != nil {
-		// log.Println("Project .env file not found withing project root. Using only hardcoded path variables.")
-		// Do Nothing...
+		fmt.Println("Project .env file not found withing project root. Using only hardcoded path variables.")
 	}
 
 	switch pathKey {
