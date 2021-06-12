@@ -75,6 +75,7 @@ func TestDeleteEmptySlices(t *testing.T) {
 
 	if (len(resultSlice)) != 2 {
 		t.Log("Expected 2 slices but got ", len(resultSlice))
+		t.Fail()
 	}
 
 }
@@ -85,6 +86,7 @@ func TestGetPath(t *testing.T) {
 	result := GetPath(invalidPathKey)
 	if result != "" {
 		t.Log("Expected empty result but got ", result)
+		t.Fail()
 	}
 
 	validPathKey := "wsPath"
