@@ -9,7 +9,7 @@ import (
 
 func TestExec(t *testing.T) {
 	testCommand := "echo"
-	testArguments := "'Hello World'"
+	testArguments := []string{"'Hello World'"}
 
 	result := Exec(testCommand, testArguments)
 
@@ -21,7 +21,7 @@ func TestExec(t *testing.T) {
 
 func TestExecAndGetLines(t *testing.T) {
 	testCommand := "echo"
-	testArguments := "$'Line1\nLine2\nLine3'"
+	testArguments := []string{"$'Line1\nLine2\nLine3'"}
 	var result []string
 
 	scanner := ExecAndGetLines(testCommand, testArguments)
