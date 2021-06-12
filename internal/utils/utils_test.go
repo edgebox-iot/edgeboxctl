@@ -14,7 +14,7 @@ func TestExec(t *testing.T) {
 	result := Exec("/", testCommand, testArguments)
 
 	if result != "Hello World" {
-		t.Log("Expected 'Hello World' but got ", "'"+result+"'")
+		t.Log("Expected 'Hello World' but got", "'"+result+"'")
 		t.Fail()
 	}
 }
