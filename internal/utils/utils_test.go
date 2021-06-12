@@ -19,6 +19,17 @@ func TestExec(t *testing.T) {
 	}
 }
 
+func ExampleExecAndStream() {
+	ExecAndStream("/", "echo", []string{"Hello"})
+	// Output:
+	// Hello
+	//
+	// out:
+	// Hello
+	//
+	// err:
+}
+
 func TestExecAndGetLines(t *testing.T) {
 	testCommand := "echo"
 	testArguments := []string{"$'Line1\nLine2\nLine3'"}
