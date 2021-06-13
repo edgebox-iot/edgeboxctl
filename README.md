@@ -42,15 +42,16 @@
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
-* [About the Project](#about-the-project)
-  * [Built With](#built-with)
-* [Getting Started](#getting-started)
-  * [Prerequisites](#prerequisites)
-  * [Installation](#installation)
-* [Usage](#usage)
-* [Roadmap](#roadmap)
-* [Contributing](#contributing)
-* [License](#license)
+- [Table of Contents](#table-of-contents)
+- [About The Project](#about-the-project)
+  - [Built With](#built-with)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Usage](#usage)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 
 
@@ -87,6 +88,14 @@ sudo apt-get install docker docker-compose
 ```
 
 Check the following links for more info on [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/).
+
+Aditionally, edgeboxctl needs the following bash commands available wherever it runs:
+* `sh`
+* `rm`
+* `systemctl`
+* `lsblk`
+* `yq`
+* `tinc-boot` _(not mandatory)_
 
 ### Installation
 

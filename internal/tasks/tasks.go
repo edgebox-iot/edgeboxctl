@@ -10,6 +10,7 @@ import (
 
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
+	"github.com/edgebox-iot/edgeboxctl/internal/storage"
 	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
@@ -253,8 +254,14 @@ func ExecuteSchedules(tick int) {
 		uptime := taskGetSystemUptime()
 		log.Println("Uptime is " + uptime + " seconds (" + system.GetUptimeFormatted() + ")")
 
+		log.Println(taskGetStorageDevices())
 		log.Println(taskGetEdgeApps())
 
+	}
+
+	if tick%5 == 0 {
+		// Executing every 5 ticks
+		log.Println(taskGetStorageDevices())
 	}
 
 	if tick%30 == 0 {
@@ -277,13 +284,13 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 	fmt.Println("Executing taskSetupTunnel")
 
 	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress + ":8655", "--prefix", args.AssignedAddress}
-	utils.Exec("tinc-boot", cmdargs)
+	utils.Exec(utils.GetPath("wsPath"), "tinc-boot", cmdargs)
 
 	cmdargs = []string{"start", "tinc@dnet"}
-	utils.Exec("systemctl", cmdargs)
+	utils.Exec(utils.GetPath("wsPath"), "systemctl", cmdargs)
 
 	cmdargs = []string{"enable", "tinc@dnet"}
-	utils.Exec("systemctl", cmdargs)
+	utils.Exec(utils.GetPath("wsPath"), "systemctl", cmdargs)
 
 	output := "OK" // Better check / logging of command execution result.
 	return output
@@ -433,5 +440,35 @@ func taskGetSystemUptime() string {
 	db.Close()
 
 	return uptime
+
+}
+
+func taskGetStorageDevices() string {
+	fmt.Println("Executing taskGetStorageDevices")
+
+	devices := storage.GetDevices()
+	devicesJSON, _ := json.Marshal(devices)
+
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec("STORAGE_DEVICES_LIST", devicesJSON, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+
+	return string(devicesJSON)
 
 }

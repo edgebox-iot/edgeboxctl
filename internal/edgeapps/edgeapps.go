@@ -239,14 +239,14 @@ func GetEdgeAppStatus(ID string) EdgeAppStatus {
 func GetEdgeAppServices(ID string) []EdgeAppService {
 
 	cmdArgs := []string{"-r", ".services | keys[]", utils.GetPath("edgeAppsPath") + ID + configFilename}
-	servicesString := utils.Exec("yq", cmdArgs)
+	servicesString := utils.Exec(utils.GetPath("wsPath"), "yq", cmdArgs)
 	serviceSlices := strings.Split(servicesString, "\n")
 	serviceSlices = utils.DeleteEmptySlices(serviceSlices)
 	var edgeAppServices []EdgeAppService
 
 	for _, serviceID := range serviceSlices {
 		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "exec", "-T", serviceID, "echo", "'Service Check'"}
-		cmdResult := utils.Exec("docker-compose", cmdArgs)
+		cmdResult := utils.Exec(utils.GetPath("wsPath"), "docker-compose", cmdArgs)
 		isRunning := false
 		if cmdResult != "" {
 			isRunning = true
@@ -268,7 +268,7 @@ func RunEdgeApp(ID string) EdgeAppStatus {
 	for _, service := range services {
 
 		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "start", service.ID}
-		utils.Exec("docker-compose", cmdArgs)
+		utils.Exec(utils.GetPath("wsPath"), "docker-compose", cmdArgs)
 
 	}
 
@@ -289,7 +289,7 @@ func StopEdgeApp(ID string) EdgeAppStatus {
 	for _, service := range services {
 
 		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "stop", service.ID}
-		utils.Exec("docker-compose", cmdArgs)
+		utils.Exec(utils.GetPath("wsPath"), "docker-compose", cmdArgs)
 
 	}
 
@@ -326,7 +326,7 @@ func DisableOnline(ID string) MaybeEdgeApp {
 		log.Println("myedge.app environment file for " + ID + " not found. No need to delete.")
 	} else {
 		cmdArgs := []string{envFilePath}
-		utils.Exec("rm", cmdArgs)
+		utils.Exec(utils.GetPath("wsPath"), "rm", cmdArgs)
 	}
 
 	buildFrameworkContainers()
@@ -338,7 +338,7 @@ func DisableOnline(ID string) MaybeEdgeApp {
 func buildFrameworkContainers() {
 
 	cmdArgs := []string{utils.GetPath("wsPath") + "ws", "--build"}
-	utils.ExecAndStream("sh", cmdArgs)
+	utils.ExecAndStream(utils.GetPath("wsPath"), "sh", cmdArgs)
 
 	time.Sleep(defaultContainerOperationSleepTime)
 
