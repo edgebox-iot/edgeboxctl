@@ -90,6 +90,7 @@ sudo apt-get install docker docker-compose
 Check the following links for more info on [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/).
 
 Aditionally, edgeboxctl needs the following bash commands available wherever it runs:
+* `arm-linux-gnueabi-gcc` (`sudo apt-get install gcc-arm*`)
 * `sh`
 * `rm`
 * `systemctl`
