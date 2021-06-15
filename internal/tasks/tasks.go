@@ -472,7 +472,7 @@ func taskGetSystemUptime() string {
 func taskGetStorageDevices() string {
 	fmt.Println("Executing taskGetStorageDevices")
 
-	devices := storage.GetDevices()
+	devices := storage.GetDevices(diagnostics.Version)
 	devicesJSON, _ := json.Marshal(devices)
 
 	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())

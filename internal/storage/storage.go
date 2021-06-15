@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 	"github.com/shirou/gopsutil/disk"
 )
@@ -68,7 +67,7 @@ type Partition struct {
 }
 
 // GetDevices : Returns a list of all available sotrage devices in structs filled with information
-func GetDevices() []Device {
+func GetDevices(release_version string) []Device {
 
 	var devices []Device
 
@@ -83,11 +82,11 @@ func GetDevices() []Device {
 
 	mainDiskID := "sda"
 
-	if diagnostics.Version == "dev" {
+	if release_version == "dev" {
 		mainDiskID = "sda"
-	} else if diagnostics.Version == "prod" {
+	} else if release_version == "prod" {
 		mainDiskID = "mmcblk0"
-	} else if diagnostics.Version == "cloud" {
+	} else if release_version == "cloud" {
 		mainDiskID = "vda"
 	}
 
