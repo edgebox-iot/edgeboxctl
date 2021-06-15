@@ -250,6 +250,9 @@ func ExecuteSchedules(tick int) {
 
 	if tick == 1 {
 
+		release := taskSetReleaseVersion()
+		log.Println("Setting api option flag for Edgeboxctl (" + release + " version)")
+
 		// Executing on startup (first tick). Schedules run before tasks in the SystemIterator
 		uptime := taskGetSystemUptime()
 		log.Println("Uptime is " + uptime + " seconds (" + system.GetUptimeFormatted() + ")")
@@ -381,6 +384,33 @@ func taskDisableOnline(args taskDisableOnlineArgs) string {
 
 	return string(resultJSON)
 
+}
+
+func taskSetReleaseVersion() string {
+
+	fmt.Println("Executing taskSetReleaseVersion")
+
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec("RELEASE_VERSION", diagnostics.Version, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+
+	return diagnostics.Version
 }
 
 func taskGetEdgeApps() string {
