@@ -83,7 +83,9 @@ func GetDevices() []Device {
 
 	mainDiskID := "sda"
 
-	if diagnostics.Version == "prod" || diagnostics.Version == "dev" {
+	if diagnostics.Version == "dev" {
+		mainDiskID = "sda"
+	} else if diagnostics.Version == "prod" {
 		mainDiskID = "mmcblk0"
 	} else if diagnostics.Version == "cloud" {
 		mainDiskID = "vda"
