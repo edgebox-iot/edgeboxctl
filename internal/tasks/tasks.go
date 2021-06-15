@@ -264,17 +264,13 @@ func ExecuteSchedules(tick int) {
 
 	if tick%5 == 0 {
 		// Executing every 5 ticks
+		taskGetSystemUptime()
 		log.Println(taskGetStorageDevices())
 	}
 
 	if tick%30 == 0 {
 		// Executing every 30 ticks
 		log.Println(taskGetEdgeApps())
-
-	}
-
-	if tick%60 == 0 {
-		// Every 60 ticks...
 
 	}
 
