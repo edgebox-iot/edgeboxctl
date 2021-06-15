@@ -66,8 +66,6 @@ type Partition struct {
 	UsageStat  UsageStat `json:"usage_stat"`
 }
 
-const mainDiskID = "mmcblk0"
-
 // GetDevices : Returns a list of all available sotrage devices in structs filled with information
 func GetDevices() []Device {
 
@@ -81,6 +79,14 @@ func GetDevices() []Device {
 
 	firstDevice := true
 	currentDeviceInUseFlag := false
+
+	mainDiskID := "sda"
+
+	if diagnostics.Version == "prod" || diagnostics.Version == "dev" {
+		mainDiskID = "mmcblk0"
+	} else if diagnostics.Version == "cloud" {
+		mainDiskID = "vda"
+	}
 
 	for scanner.Scan() {
 		// 1 Device is represented here. Extract words in order for filling a Device struct
