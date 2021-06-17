@@ -250,6 +250,9 @@ func ExecuteSchedules(tick int) {
 
 	if tick == 1 {
 
+		ip := taskGetSystemIP()
+		log.Println("System IP is: " + ip)
+
 		release := taskSetReleaseVersion()
 		log.Println("Setting api option flag for Edgeboxctl (" + release + " version)")
 
@@ -272,6 +275,11 @@ func ExecuteSchedules(tick int) {
 		// Executing every 30 ticks
 		log.Println(taskGetEdgeApps())
 
+	}
+
+	if tick%60 == 0 {
+		ip := taskGetSystemIP()
+		log.Println("System IP is: " + ip)
 	}
 
 	// Just add a schedule here if you need a custom one (every "tick hour", every "tick day", etc...)
@@ -497,4 +505,32 @@ func taskGetStorageDevices() string {
 
 	return string(devicesJSON)
 
+}
+
+func taskGetSystemIP() string {
+	fmt.Println("Executing taskGetStorageDevices")
+
+	ip := system.GetIP()
+
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec("IP_ADDRESS", ip, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+
+	return ip
 }
