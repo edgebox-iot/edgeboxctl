@@ -60,6 +60,10 @@ type taskDisableOnlineArgs struct {
 	ID string `json:"id"`
 }
 
+type taskEnablePublicDashboardArgs struct {
+	InternetURL string `json:"internet_url`
+}
+
 // GetNextTask : Performs a MySQL query over the device's Edgebox API
 func GetNextTask() Task {
 
@@ -206,6 +210,24 @@ func ExecuteTask(task Task) Task {
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
+		case "enable_public_dashboard":
+
+			log.Println("Enabling online access to Dashboard...")
+			var args taskEnablePublicDashboardArgs
+			err := json.Unmarshal([]byte(task.Args.String), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of enable_public_dashboard task: %s", err)
+			} else {
+				taskResult := taskEnablePublicDashboard(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "disable_public_dashboard":
+
+			log.Println("Disabling online access to Dashboard...")
+			taskResult := taskDisablePublicDashboard()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
 		}
 
 	}
@@ -225,7 +247,6 @@ func ExecuteTask(task Task) Task {
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-
 	} else {
 		_, err = statement.Exec(3, "Error", formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
 		if err != nil {
@@ -274,7 +295,6 @@ func ExecuteSchedules(tick int) {
 	if tick%30 == 0 {
 		// Executing every 30 ticks
 		log.Println(taskGetEdgeApps())
-
 	}
 
 	if tick%60 == 0 {
@@ -387,6 +407,30 @@ func taskDisableOnline(args taskDisableOnlineArgs) string {
 	taskGetEdgeApps()
 
 	return string(resultJSON)
+
+}
+
+func taskEnablePublicDashboard(args taskEnablePublicDashboardArgs) string {
+
+	fmt.Println("Enabling taskEnablePublicDashboard")
+	result := edgeapps.EnablePublicDashboard(args.InternetURL)
+	if result {
+		return "{result: true}"
+
+	}
+
+	return "{result: false}"
+
+}
+
+func taskDisablePublicDashboard() string {
+	
+	fmt.Println("Executing taskDisablePublicDashboard")
+	result := edgeapps.DisablePublicDashboard()
+	if result {
+		return "{result: true}"
+	}
+	return "{result: false}"
 
 }
 
