@@ -341,6 +341,8 @@ func EnablePublicDashboard(InternetURL string) bool {
 	env, _ := godotenv.Unmarshal("INTERNET_URL=" + InternetURL)
 	_ = godotenv.Write(env, envFilePath)
 
+	buildFrameworkContainers()
+
 	return true
 
 }

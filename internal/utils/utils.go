@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -144,4 +145,27 @@ func GetPath(pathKey string) string {
 
 	return targetPath
 
+}
+
+func WriteOption(optionKey string, optionValue string) {
+
+	db, err := sql.Open("sqlite3", GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec(optionKey, optionValue, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
 }

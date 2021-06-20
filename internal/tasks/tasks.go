@@ -415,6 +415,9 @@ func taskEnablePublicDashboard(args taskEnablePublicDashboardArgs) string {
 	fmt.Println("Enabling taskEnablePublicDashboard")
 	result := edgeapps.EnablePublicDashboard(args.InternetURL)
 	if result {
+
+		utils.WriteOption("PUBLIC_DASHBOARD", "true")
+
 		return "{result: true}"
 
 	}
@@ -424,10 +427,11 @@ func taskEnablePublicDashboard(args taskEnablePublicDashboardArgs) string {
 }
 
 func taskDisablePublicDashboard() string {
-	
+
 	fmt.Println("Executing taskDisablePublicDashboard")
 	result := edgeapps.DisablePublicDashboard()
 	if result {
+		utils.WriteOption("PUBLIC_DASBOARD", "false")
 		return "{result: true}"
 	}
 	return "{result: false}"
@@ -438,25 +442,7 @@ func taskSetReleaseVersion() string {
 
 	fmt.Println("Executing taskSetReleaseVersion")
 
-	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
-
-	_, err = statement.Exec("RELEASE_VERSION", diagnostics.Version, formatedDatetime, formatedDatetime) // Execute SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	db.Close()
+	utils.WriteOption("RELEASE_VERSION", diagnostics.Version)
 
 	return diagnostics.Version
 }
@@ -468,25 +454,7 @@ func taskGetEdgeApps() string {
 	edgeApps := edgeapps.GetEdgeApps()
 	edgeAppsJSON, _ := json.Marshal(edgeApps)
 
-	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
-
-	_, err = statement.Exec("EDGEAPPS_LIST", string(edgeAppsJSON), formatedDatetime, formatedDatetime) // Execute SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	db.Close()
+	utils.WriteOption("EDGEAPPS_LIST", string(edgeAppsJSON))
 
 	return string(edgeAppsJSON)
 
@@ -497,25 +465,7 @@ func taskGetSystemUptime() string {
 
 	uptime := system.GetUptimeInSeconds()
 
-	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
-
-	_, err = statement.Exec("SYSTEM_UPTIME", uptime, formatedDatetime, formatedDatetime) // Execute SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	db.Close()
+	utils.WriteOption("SYSTEM_UPTIME", uptime)
 
 	return uptime
 
@@ -527,25 +477,7 @@ func taskGetStorageDevices() string {
 	devices := storage.GetDevices(diagnostics.Version)
 	devicesJSON, _ := json.Marshal(devices)
 
-	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
-
-	_, err = statement.Exec("STORAGE_DEVICES_LIST", devicesJSON, formatedDatetime, formatedDatetime) // Execute SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	db.Close()
+	utils.WriteOption("STORAGE_DEVICES_LIST", string(devicesJSON))
 
 	return string(devicesJSON)
 
@@ -556,25 +488,7 @@ func taskGetSystemIP() string {
 
 	ip := system.GetIP()
 
-	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
-
-	_, err = statement.Exec("IP_ADDRESS", ip, formatedDatetime, formatedDatetime) // Execute SQL Statement
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	db.Close()
+	utils.WriteOption("IP_ADDRESS", ip)
 
 	return ip
 }
