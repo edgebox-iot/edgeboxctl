@@ -12,12 +12,14 @@ import (
 
 )
 
+// GetUptimeInSeconds: Returns a value (as string) of the total system uptime
 func GetUptimeInSeconds() string {
 	uptime, _ := host.Uptime()
 
 	return strconv.FormatUint(uptime, 10)
 }
 
+// GetUptimeFormatted: Returns a humanized version that can be useful for logging
 func GetUptimeFormatted() string {
 	uptime, _ := host.Uptime()
 
@@ -27,6 +29,7 @@ func GetUptimeFormatted() string {
 	return fmt.Sprintf("%d days, %d hours, %d minutes", days, hours, minutes)
 }
 
+// GetIP: Returns the ip address of the instance 
 func GetIP() string {
 	ip := ""
 
@@ -57,6 +60,7 @@ func GetHostname() string {
 	return utils.Exec("/", "hostname", []string{})
 }
 
+// SetupCloudOptions: Reads the designated env file looking for options to write into the options table. Meant to be used on initial setup. Deletes source env file after operation.
 func SetupCloudOptions() {
 
 	var cloudEnv map[string]string

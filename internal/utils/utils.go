@@ -163,6 +163,7 @@ func GetPath(pathKey string) string {
 
 }
 
+// WriteOption : Writes a key value pair option into the api shared database
 func WriteOption(optionKey string, optionValue string) {
 
 	db, err := sql.Open("sqlite3", GetSQLiteDbConnectionDetails())
