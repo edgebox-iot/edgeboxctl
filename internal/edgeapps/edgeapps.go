@@ -363,6 +363,12 @@ func DisablePublicDashboard() bool {
 
 }
 
+func IsPublicDashboard() bool {
+	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
+	_, err := godotenv.Read(envFilePath)
+	return err != nil
+}
+
 func buildFrameworkContainers() {
 
 	cmdArgs := []string{utils.GetPath("wsPath") + "ws", "--build"}

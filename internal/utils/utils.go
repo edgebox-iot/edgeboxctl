@@ -121,6 +121,14 @@ func GetPath(pathKey string) string {
 			targetPath = "/home/system/components/api/edgebox.env"
 		}
 
+	case "apiPath":
+
+		if env["API_PATH"] != "" {
+			targetPath = env["APT_PATH"]
+		} else {
+			targetPath = "/home/system/components/api/"
+		}
+
 	case "edgeAppsPath":
 
 		if env["EDGEAPPS_PATH"] != "" {

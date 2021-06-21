@@ -47,6 +47,10 @@ func GetIP() string {
 			}
 		}
 	}
-	
+
 	return ip
+}
+
+func GetHostname() string {
+	return utils.Exec("/", "hostname", []string{})
 }
