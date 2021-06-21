@@ -113,6 +113,14 @@ func GetPath(pathKey string) string {
 	}
 
 	switch pathKey {
+	case "cloudEnvFileLocation":
+
+		if env["CLOUD_ENV_FILE_LOCATION"] != "" {
+			targetPath = env["CLOUD_ENV_FILE_LOCATION"]
+		} else {
+			targetPath = "/home/system/components/edgeboxctl/cloud.env"
+		}
+
 	case "apiEnvFileLocation":
 
 		if env["API_ENV_FILE_LOCATION"] != "" {

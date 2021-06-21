@@ -8,6 +8,8 @@ import (
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 
 	"github.com/shirou/gopsutil/host"
+	"github.com/joho/godotenv"
+
 )
 
 func GetUptimeInSeconds() string {
@@ -53,4 +55,30 @@ func GetIP() string {
 
 func GetHostname() string {
 	return utils.Exec("/", "hostname", []string{})
+}
+
+func SetupCloudOptions() {
+
+	var cloudEnv map[string]string
+	cloudEnv, err := godotenv.Read(utils.GetPath("cloudEnvFileLocation"))
+
+	if err != nil {
+		fmt.Println("Error loading .env file for cloud version setup")
+	}
+
+	if cloudEnv["NAME"] != "" {
+		utils.WriteOption("NAME", cloudEnv["NAME"])
+	}
+
+	if cloudEnv["EMAIL"] != "" {
+		utils.WriteOption("EMAIL", cloudEnv["EMAIL"])
+	}
+
+	if cloudEnv["EDGEBOXIO_API_TOKEN"] != "" {
+		utils.WriteOption("EDGEBOXIO_API_TOKEN", cloudEnv["EDGEBOXIO_API_TOKEN"])
+	}
+
+	// In the end of this operation takes place, remove the env file as to not overwrite any options once they are set.
+	utils.Exec("/", "rm", []string{utils.GetPath("cloudEnvFileLocation")})
+
 }

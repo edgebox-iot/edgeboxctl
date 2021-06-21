@@ -281,11 +281,17 @@ func ExecuteSchedules(tick int) {
 		hostname := taskGetHostname()
 		log.Println("Hostname is " + hostname)
 
-		if diagnostics.Version == "cloud" && !edgeapps.IsPublicDashboard() {
-			taskEnablePublicDashboard(taskEnablePublicDashboardArgs{
-				InternetURL: hostname + ".myedge.app",
-			})
+		// if diagnostics.Version == "cloud" && !edgeapps.IsPublicDashboard() {
+		// 	taskEnablePublicDashboard(taskEnablePublicDashboardArgs{
+		// 		InternetURL: hostname + ".myedge.app",
+		// 	})
+		// }
+
+		if diagnostics.Version == "cloud" {
+			log.Println("Setting up cloud version options (name, email, api token)")
+			taskSetupCloudOptions()
 		}
+		 
 
 		// Executing on startup (first tick). Schedules run before tasks in the SystemIterator
 		uptime := taskGetSystemUptime()
@@ -466,4 +472,9 @@ func taskGetHostname() string {
 	hostname := system.GetHostname()
 	utils.WriteOption("HOSTNAME", hostname)
 	return hostname
+}
+
+func taskSetupCloudOptions() {
+	fmt.Println("Executing taskSetupCloudOptions")
+	system.SetupCloudOptions()
 }
