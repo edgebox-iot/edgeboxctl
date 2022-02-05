@@ -291,7 +291,6 @@ func ExecuteSchedules(tick int) {
 			log.Println("Setting up cloud version options (name, email, api token)")
 			taskSetupCloudOptions()
 		}
-		 
 
 		// Executing on startup (first tick). Schedules run before tasks in the SystemIterator
 		uptime := taskGetSystemUptime()
