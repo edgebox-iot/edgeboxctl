@@ -121,7 +121,7 @@ func ExecuteTask(task Task) Task {
 		log.Fatal(err.Error())
 	}
 
-	if diagnostics.Version == "dev" {
+	if diagnostics.GetReleaseVersion() == diagnostics.DEV_VERSION {
 		log.Printf("Dev environemnt. Not executing tasks.")
 	} else {
 		log.Println("Task: " + task.Task)
@@ -287,7 +287,7 @@ func ExecuteSchedules(tick int) {
 		// 	})
 		// }
 
-		if diagnostics.Version == "cloud" {
+		if diagnostics.GetReleaseVersion() == diagnostics.CLOUD_VERSION {
 			log.Println("Setting up cloud version options (name, email, api token)")
 			taskSetupCloudOptions()
 		}
@@ -451,7 +451,7 @@ func taskGetSystemUptime() string {
 func taskGetStorageDevices() string {
 	fmt.Println("Executing taskGetStorageDevices")
 
-	devices := storage.GetDevices(diagnostics.Version)
+	devices := storage.GetDevices(diagnostics.GetReleaseVersion())
 	devicesJSON, _ := json.Marshal(devices)
 
 	utils.WriteOption("STORAGE_DEVICES_LIST", string(devicesJSON))
