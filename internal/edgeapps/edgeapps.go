@@ -349,8 +349,7 @@ func EnablePublicDashboard(InternetURL string) bool {
 
 func DisablePublicDashboard() bool {
 	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
-	_, err := godotenv.Read(envFilePath)
-	if err != nil {
+	if !IsPublicDashboard() {
 		log.Println("myedge.app environment file for the dashboard / api not found. No need to delete.")
 		return false
 	}
@@ -364,7 +363,7 @@ func DisablePublicDashboard() bool {
 func IsPublicDashboard() bool {
 	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
 	_, err := godotenv.Read(envFilePath)
-	return err != nil
+	return err == nil
 }
 
 func buildFrameworkContainers() {
