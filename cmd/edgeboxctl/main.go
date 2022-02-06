@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/tasks"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
+	"github.com/urfave/cli/v2" // imports as package "cli"
 )
 
 const defaultNotReadySleepTime time.Duration = time.Second * 60
@@ -19,25 +19,23 @@ const defaultSleepTime time.Duration = time.Second
 
 func main() {
 
-	// load command line arguments
-
-	version := flag.Bool("version", false, "Get the version info")
-	db := flag.Bool("database", false, "Get database connection info")
-	name := flag.String("name", "edgebox", "Name for the service")
-
-	flag.Parse()
-
-	if *version {
-		printVersion()
-		os.Exit(0)
+	app := &cli.App{
+		Name:  "edgeboxctl",
+		Usage: "A tool to facilitate hosting apps and securing your personal data",
+		Action: func(c *cli.Context) error {
+			startService()
+			return nil
+		},
 	}
 
-	if *db {
-		printDbDetails()
-		os.Exit(0)
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
 	}
+}
 
-	log.Printf("Starting edgeboxctl service for %s", *name)
+func startService() {
+	log.Printf("Starting edgeboxctl service")
 
 	// setup signal catching
 	sigs := make(chan os.Signal, 1)
@@ -67,7 +65,7 @@ func main() {
 
 		if isSystemReady() {
 			tick++ // Tick is an int, so eventually will "go out of ticks?" Maybe we want to reset the ticks every once in a while, to avoid working with big numbers...
-			systemIterator(name, tick)
+			systemIterator(tick)
 		} else {
 			// Wait about 60 seconds before trying again.
 			log.Printf("System not ready. Next try will be executed in 60 seconds")
@@ -75,7 +73,6 @@ func main() {
 		}
 
 	}
-
 }
 
 // AppCleanup : cleanup app state before exit
@@ -108,7 +105,7 @@ func isDatabaseReady() bool {
 	return false
 }
 
-func systemIterator(name *string, tick int) {
+func systemIterator(tick int) {
 
 	log.Printf("Tick is %d", tick)
 
