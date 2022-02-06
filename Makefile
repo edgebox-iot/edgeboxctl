@@ -12,6 +12,9 @@ build-all:
 build-prod:
 	GOOS=linux GOARCH=arm RELEASE=prod make build
 
+build-cloud:
+	GOOS=linux GOARCH=amd64 RELEASE=cloud make build
+
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
 	GOOS=${GOOS} GOARCH=${GOARCH} go build \

@@ -335,6 +335,37 @@ func DisableOnline(ID string) MaybeEdgeApp {
 
 }
 
+func EnablePublicDashboard(InternetURL string) bool {
+
+	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
+	env, _ := godotenv.Unmarshal("INTERNET_URL=" + InternetURL)
+	_ = godotenv.Write(env, envFilePath)
+
+	buildFrameworkContainers()
+
+	return true
+
+}
+
+func DisablePublicDashboard() bool {
+	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
+	if !IsPublicDashboard() {
+		log.Println("myedge.app environment file for the dashboard / api not found. No need to delete.")
+		return false
+	}
+
+	cmdArgs := []string{envFilePath}
+	utils.Exec(utils.GetPath("apiPath"), "rm", cmdArgs)
+	buildFrameworkContainers()
+	return true
+}
+
+func IsPublicDashboard() bool {
+	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
+	_, err := godotenv.Read(envFilePath)
+	return err == nil
+}
+
 func buildFrameworkContainers() {
 
 	cmdArgs := []string{utils.GetPath("wsPath") + "ws", "--build"}

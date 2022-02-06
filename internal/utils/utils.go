@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -112,12 +113,28 @@ func GetPath(pathKey string) string {
 	}
 
 	switch pathKey {
+	case "cloudEnvFileLocation":
+
+		if env["CLOUD_ENV_FILE_LOCATION"] != "" {
+			targetPath = env["CLOUD_ENV_FILE_LOCATION"]
+		} else {
+			targetPath = "/home/system/components/edgeboxctl/cloud.env"
+		}
+
 	case "apiEnvFileLocation":
 
 		if env["API_ENV_FILE_LOCATION"] != "" {
 			targetPath = env["API_ENV_FILE_LOCATION"]
 		} else {
 			targetPath = "/home/system/components/api/edgebox.env"
+		}
+
+	case "apiPath":
+
+		if env["API_PATH"] != "" {
+			targetPath = env["APT_PATH"]
+		} else {
+			targetPath = "/home/system/components/api/"
 		}
 
 	case "edgeAppsPath":
@@ -144,4 +161,28 @@ func GetPath(pathKey string) string {
 
 	return targetPath
 
+}
+
+// WriteOption : Writes a key value pair option into the api shared database
+func WriteOption(optionKey string, optionValue string) {
+
+	db, err := sql.Open("sqlite3", GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("REPLACE into option (name, value, created, updated) VALUES (?, ?, ?, ?);") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	formatedDatetime := GetSQLiteFormattedDateTime(time.Now())
+
+	_, err = statement.Exec(optionKey, optionValue, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
 }

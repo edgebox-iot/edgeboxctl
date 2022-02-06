@@ -6,24 +6,25 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 	"github.com/shirou/gopsutil/disk"
 )
 
 // Device : Struct representing a storage device in the system
 type Device struct {
-	ID         string       `json:"id"`
-	Name       string       `json:"name"`
-	Size       string       `json:"size"`
-	InUse      bool         `json:"in_use"`
-	MainDevice bool         `json:"main_device"`
-	MAJ        string       `json:"maj"`
-	MIN        string       `json:"min"`
-	RM         string       `json:"rm"`
-	RO         string       `json:"ro"`
-	Partitions []Partition  `json:"partitions"`
-	Status     DeviceStatus `json:"status"`
-	UsageStat  UsageStat    `json:"usage_stat"`
+	ID         DeviceIdentifier `json:"id"`
+	Name       string           `json:"name"`
+	Size       string           `json:"size"`
+	InUse      bool             `json:"in_use"`
+	MainDevice bool             `json:"main_device"`
+	MAJ        string           `json:"maj"`
+	MIN        string           `json:"min"`
+	RM         string           `json:"rm"`
+	RO         string           `json:"ro"`
+	Partitions []Partition      `json:"partitions"`
+	Status     DeviceStatus     `json:"status"`
+	UsageStat  UsageStat        `json:"usage_stat"`
 }
 
 // DeviceStatus : Struct representing possible storage device statuses (code + description)
@@ -66,10 +67,27 @@ type Partition struct {
 	UsageStat  UsageStat `json:"usage_stat"`
 }
 
-const mainDiskID = "mmcblk0"
+type DeviceIdentifier string
+
+const (
+	DISK_TYPE_SDA   DeviceIdentifier = "sda"
+	DISK_TYPE_MCBLK DeviceIdentifier = "mmcblk0"
+	DISK_TYPE_VDA   DeviceIdentifier = "vda"
+)
+
+func GetDeviceIdentifier(release_version diagnostics.ReleaseVersion) DeviceIdentifier {
+	switch release_version {
+	case diagnostics.CLOUD_VERSION:
+		return DISK_TYPE_VDA
+	case diagnostics.PROD_VERSION:
+		return DISK_TYPE_MCBLK
+	}
+
+	return DISK_TYPE_SDA
+}
 
 // GetDevices : Returns a list of all available sotrage devices in structs filled with information
-func GetDevices() []Device {
+func GetDevices(release_version diagnostics.ReleaseVersion) []Device {
 
 	var devices []Device
 
@@ -81,6 +99,8 @@ func GetDevices() []Device {
 
 	firstDevice := true
 	currentDeviceInUseFlag := false
+
+	mainDiskID := GetDeviceIdentifier(release_version)
 
 	for scanner.Scan() {
 		// 1 Device is represented here. Extract words in order for filling a Device struct
@@ -122,7 +142,7 @@ func GetDevices() []Device {
 			mainDevice := false
 
 			device := Device{
-				ID:         deviceRawInfo[0],
+				ID:         DeviceIdentifier(deviceRawInfo[0]),
 				Name:       deviceRawInfo[0],
 				Size:       deviceRawInfo[3],
 				MainDevice: mainDevice,
