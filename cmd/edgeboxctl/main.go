@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -23,8 +24,61 @@ func main() {
 		Name:  "edgeboxctl",
 		Usage: "A tool to facilitate hosting apps and securing your personal data",
 		Action: func(c *cli.Context) error {
-			startService()
+			startService() // Defaults to start as a service if no commands or flags are passed
 			return nil
+		},
+		Commands: []*cli.Command{
+			{
+				Name:    "bootstrap",
+				Aliases: []string{"a"},
+				Usage:   "Setps up initial structure and dependencies for the edgebox system",
+				Action: func(c *cli.Context) error {
+					fmt.Println("Edgebox Setup")
+					return nil
+				},
+			},
+			{
+				Name:    "app",
+				Aliases: []string{"t"},
+				Usage:   "options for edgeapp management",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "start",
+						Usage: "start the specified app",
+						Action: func(c *cli.Context) error {
+							fmt.Println("Starting edgeapp: ", c.Args().First())
+							currentFormattedTime := utils.GetFormattedDateTime(time.Now())
+							var task tasks.Task
+							task.ID = 0
+							task.Task = "start_edgeapp"
+							task.Args = sql.NullString{String: fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), Valid: true}
+							task.Status = string(tasks.STATUS_CREATED)
+							task.Created = currentFormattedTime
+							task.Updated = currentFormattedTime
+
+							task = tasks.ExecuteTask(task)
+							return nil
+						},
+					},
+					{
+						Name:  "stop",
+						Usage: "stop the specified app",
+						Action: func(c *cli.Context) error {
+							fmt.Println("Stopping edgeapp: ", c.Args().First())
+							currentFormattedTime := utils.GetFormattedDateTime(time.Now())
+							var task tasks.Task
+							task.ID = 0
+							task.Task = "stop_edgeapp"
+							task.Args = sql.NullString{String: fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), Valid: true}
+							task.Status = string(tasks.STATUS_CREATED)
+							task.Created = currentFormattedTime
+							task.Updated = currentFormattedTime
+							task = tasks.ExecuteTask(task)
+							return nil
+						},
+					},
+				},
+			},
 		},
 	}
 

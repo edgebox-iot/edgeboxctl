@@ -119,7 +119,7 @@ func ExecuteTask(task Task) Task {
 		log.Fatal(err.Error())
 	}
 
-	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
+	formatedDatetime := utils.GetFormattedDateTime(time.Now())
 
 	_, err = statement.Exec(STATUS_EXECUTING, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement
 	if err != nil {
@@ -246,7 +246,7 @@ func ExecuteTask(task Task) Task {
 		log.Fatal(err.Error())
 	}
 
-	formatedDatetime = utils.GetSQLiteFormattedDateTime(time.Now())
+	formatedDatetime = utils.GetFormattedDateTime(time.Now())
 
 	if task.Result.Valid {
 		_, err = statement.Exec(STATUS_FINISHED, task.Result.String, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with result info

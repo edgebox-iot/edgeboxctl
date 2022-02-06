@@ -91,8 +91,8 @@ func GetSQLiteDbConnectionDetails() string {
 
 }
 
-// GetSQLiteFormattedDateTime: Given a Time, Returns a string that is formatted ready to be inserted into an SQLite Datetime field using sql.Prepare.
-func GetSQLiteFormattedDateTime(t time.Time) string {
+// GetFormattedDateTime: Given a Time, Returns a string that is formatted ready to be inserted into an SQLite Datetime field using sql.Prepare.
+func GetFormattedDateTime(t time.Time) string {
 	// This date is used to indicate the layout.
 	const datetimeLayout = "2006-01-02 15:04:05"
 	formatedDatetime := t.Format(datetimeLayout)
@@ -177,7 +177,7 @@ func WriteOption(optionKey string, optionValue string) {
 		log.Fatal(err.Error())
 	}
 
-	formatedDatetime := GetSQLiteFormattedDateTime(time.Now())
+	formatedDatetime := GetFormattedDateTime(time.Now())
 
 	_, err = statement.Exec(optionKey, optionValue, formatedDatetime, formatedDatetime) // Execute SQL Statement
 	if err != nil {
