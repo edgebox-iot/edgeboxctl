@@ -52,7 +52,7 @@ func main() {
 							task.ID = 0
 							task.Task = "start_edgeapp"
 							task.Args = sql.NullString{String: fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), Valid: true}
-							task.Status = string(tasks.STATUS_CREATED)
+							task.Status = fmt.Sprintf("%d", tasks.STATUS_CREATED)
 							task.Created = currentFormattedTime
 							task.Updated = currentFormattedTime
 
@@ -70,7 +70,7 @@ func main() {
 							task.ID = 0
 							task.Task = "stop_edgeapp"
 							task.Args = sql.NullString{String: fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), Valid: true}
-							task.Status = string(tasks.STATUS_CREATED)
+							task.Status = fmt.Sprintf("%d", tasks.STATUS_CREATED)
 							task.Created = currentFormattedTime
 							task.Updated = currentFormattedTime
 							task = tasks.ExecuteTask(task)
