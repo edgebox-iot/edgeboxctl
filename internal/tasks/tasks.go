@@ -64,6 +64,11 @@ type taskEnablePublicDashboardArgs struct {
 	InternetURL string `json:"internet_url"`
 }
 
+const STATUS_CREATED int = 0
+const STATUS_EXECUTING int = 1
+const STATUS_FINISHED int = 2
+const STATUS_ERROR int = 3
+
 // GetNextTask : Performs a MySQL query over the device's Edgebox API
 func GetNextTask() Task {
 
@@ -116,7 +121,7 @@ func ExecuteTask(task Task) Task {
 
 	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
 
-	_, err = statement.Exec(1, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement
+	_, err = statement.Exec(STATUS_EXECUTING, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -244,12 +249,12 @@ func ExecuteTask(task Task) Task {
 	formatedDatetime = utils.GetSQLiteFormattedDateTime(time.Now())
 
 	if task.Result.Valid {
-		_, err = statement.Exec(2, task.Result.String, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with result info
+		_, err = statement.Exec(STATUS_FINISHED, task.Result.String, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with result info
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 	} else {
-		_, err = statement.Exec(3, "Error", formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
+		_, err = statement.Exec(STATUS_ERROR, "Error", formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
 		if err != nil {
 			log.Fatal(err.Error())
 		}
