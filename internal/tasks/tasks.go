@@ -69,6 +69,23 @@ const STATUS_EXECUTING int = 1
 const STATUS_FINISHED int = 2
 const STATUS_ERROR int = 3
 
+func GetBaseTask(taskCode string, argsString string) Task {
+	currentFormattedTime := utils.GetFormattedDateTime(time.Now())
+	task := Task{
+		ID:   0,
+		Task: taskCode,
+		Args: sql.NullString{
+			String: argsString,
+			Valid:  true,
+		},
+		Status:  fmt.Sprintf("%d", STATUS_CREATED),
+		Created: currentFormattedTime,
+		Updated: currentFormattedTime,
+	}
+
+	return task
+}
+
 // GetNextTask : Performs a MySQL query over the device's Edgebox API
 func GetNextTask() Task {
 
@@ -129,8 +146,8 @@ func ExecuteTask(task Task) Task {
 	if diagnostics.GetReleaseVersion() == diagnostics.DEV_VERSION {
 		log.Printf("Dev environemnt. Not executing tasks.")
 	} else {
-		log.Println("Task: " + task.Task)
-		log.Println("Args: " + task.Args.String)
+		// log.Println("Task: " + task.Task)
+		// log.Println("Args: " + task.Args.String)
 		switch task.Task {
 		case "setup_tunnel":
 
@@ -327,7 +344,7 @@ func ExecuteSchedules(tick int) {
 }
 
 func taskSetupTunnel(args taskSetupTunnelArgs) string {
-	fmt.Println("Executing taskSetupTunnel")
+	// // fmt.Println("Executing taskSetupTunnel")
 
 	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress + ":8655", "--prefix", args.AssignedAddress}
 	utils.Exec(utils.GetPath("wsPath"), "tinc-boot", cmdargs)
@@ -343,7 +360,7 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 }
 
 func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
-	fmt.Println("Executing taskInstallEdgeApp for " + args.ID)
+	// fmt.Println("Executing taskInstallEdgeApp for " + args.ID)
 
 	result := edgeapps.SetEdgeAppInstalled(args.ID)
 	resultJSON, _ := json.Marshal(result)
@@ -353,7 +370,7 @@ func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
 }
 
 func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
-	fmt.Println("Executing taskRemoveEdgeApp for " + args.ID)
+	// fmt.Println("Executing taskRemoveEdgeApp for " + args.ID)
 
 	// Making sure the application is stopped before setting it as removed.
 	edgeapps.StopEdgeApp(args.ID)
@@ -365,7 +382,7 @@ func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
 }
 
 func taskStartEdgeApp(args taskStartEdgeAppArgs) string {
-	fmt.Println("Executing taskStartEdgeApp for " + args.ID)
+	// fmt.Println("Executing taskStartEdgeApp for " + args.ID)
 
 	result := edgeapps.RunEdgeApp(args.ID)
 	resultJSON, _ := json.Marshal(result)
@@ -375,7 +392,7 @@ func taskStartEdgeApp(args taskStartEdgeAppArgs) string {
 }
 
 func taskStopEdgeApp(args taskStopEdgeAppArgs) string {
-	fmt.Println("Executing taskStopEdgeApp for " + args.ID)
+	// fmt.Println("Executing taskStopEdgeApp for " + args.ID)
 
 	result := edgeapps.StopEdgeApp(args.ID)
 	resultJSON, _ := json.Marshal(result)
@@ -385,7 +402,7 @@ func taskStopEdgeApp(args taskStopEdgeAppArgs) string {
 }
 
 func taskEnableOnline(args taskEnableOnlineArgs) string {
-	fmt.Println("Executing taskEnableOnline for " + args.ID)
+	// fmt.Println("Executing taskEnableOnline for " + args.ID)
 
 	result := edgeapps.EnableOnline(args.ID, args.InternetURL)
 	resultJSON, _ := json.Marshal(result)
@@ -395,7 +412,7 @@ func taskEnableOnline(args taskEnableOnlineArgs) string {
 }
 
 func taskDisableOnline(args taskDisableOnlineArgs) string {
-	fmt.Println("Executing taskDisableOnline for " + args.ID)
+	// fmt.Println("Executing taskDisableOnline for " + args.ID)
 
 	result := edgeapps.DisableOnline(args.ID)
 	resultJSON, _ := json.Marshal(result)
@@ -405,7 +422,7 @@ func taskDisableOnline(args taskDisableOnlineArgs) string {
 }
 
 func taskEnablePublicDashboard(args taskEnablePublicDashboardArgs) string {
-	fmt.Println("Enabling taskEnablePublicDashboard")
+	// fmt.Println("Enabling taskEnablePublicDashboard")
 	result := edgeapps.EnablePublicDashboard(args.InternetURL)
 	if result {
 
@@ -418,7 +435,7 @@ func taskEnablePublicDashboard(args taskEnablePublicDashboardArgs) string {
 }
 
 func taskDisablePublicDashboard() string {
-	fmt.Println("Executing taskDisablePublicDashboard")
+	// fmt.Println("Executing taskDisablePublicDashboard")
 	result := edgeapps.DisablePublicDashboard()
 	utils.WriteOption("PUBLIC_DASHBOARD", "")
 	if result {
@@ -429,7 +446,7 @@ func taskDisablePublicDashboard() string {
 
 func taskSetReleaseVersion() string {
 
-	fmt.Println("Executing taskSetReleaseVersion")
+	// fmt.Println("Executing taskSetReleaseVersion")
 
 	utils.WriteOption("RELEASE_VERSION", diagnostics.Version)
 
@@ -437,7 +454,7 @@ func taskSetReleaseVersion() string {
 }
 
 func taskGetEdgeApps() string {
-	fmt.Println("Executing taskGetEdgeApps")
+	// fmt.Println("Executing taskGetEdgeApps")
 
 	edgeApps := edgeapps.GetEdgeApps()
 	edgeAppsJSON, _ := json.Marshal(edgeApps)
@@ -447,14 +464,14 @@ func taskGetEdgeApps() string {
 }
 
 func taskGetSystemUptime() string {
-	fmt.Println("Executing taskGetSystemUptime")
+	// fmt.Println("Executing taskGetSystemUptime")
 	uptime := system.GetUptimeInSeconds()
 	utils.WriteOption("SYSTEM_UPTIME", uptime)
 	return uptime
 }
 
 func taskGetStorageDevices() string {
-	fmt.Println("Executing taskGetStorageDevices")
+	// fmt.Println("Executing taskGetStorageDevices")
 
 	devices := storage.GetDevices(diagnostics.GetReleaseVersion())
 	devicesJSON, _ := json.Marshal(devices)
@@ -465,20 +482,20 @@ func taskGetStorageDevices() string {
 }
 
 func taskGetSystemIP() string {
-	fmt.Println("Executing taskGetStorageDevices")
+	// fmt.Println("Executing taskGetStorageDevices")
 	ip := system.GetIP()
 	utils.WriteOption("IP_ADDRESS", ip)
 	return ip
 }
 
 func taskGetHostname() string {
-	fmt.Println("Executing taskGetHostname")
+	// fmt.Println("Executing taskGetHostname")
 	hostname := system.GetHostname()
 	utils.WriteOption("HOSTNAME", hostname)
 	return hostname
 }
 
 func taskSetupCloudOptions() {
-	fmt.Println("Executing taskSetupCloudOptions")
+	// fmt.Println("Executing taskSetupCloudOptions")
 	system.SetupCloudOptions()
 }

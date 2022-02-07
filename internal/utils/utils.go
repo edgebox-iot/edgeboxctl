@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TylerBrock/colorjson"
 	"github.com/joho/godotenv"
 )
 
@@ -185,4 +187,11 @@ func WriteOption(optionKey string, optionValue string) {
 	}
 
 	db.Close()
+}
+
+func ColorJsonString(jsonString string) string {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(jsonString), &obj)
+	resultJSON, _ := colorjson.Marshal(obj)
+	return string(resultJSON)
 }

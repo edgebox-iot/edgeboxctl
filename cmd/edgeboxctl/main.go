@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -46,35 +45,25 @@ func main() {
 						Name:  "start",
 						Usage: "start the specified app",
 						Action: func(c *cli.Context) error {
-							fmt.Println("Starting edgeapp: ", c.Args().First())
-							currentFormattedTime := utils.GetFormattedDateTime(time.Now())
-							var task tasks.Task
-							task.ID = 0
-							task.Task = "start_edgeapp"
-							task.Args = sql.NullString{String: fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), Valid: true}
-							task.Status = fmt.Sprintf("%d", tasks.STATUS_CREATED)
-							task.Created = currentFormattedTime
-							task.Updated = currentFormattedTime
+							task := tasks.ExecuteTask(tasks.GetBaseTask(
+								"start_edgeapp",
+								fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()),
+							))
 
-							task = tasks.ExecuteTask(task)
-							return nil
+							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
 						},
 					},
 					{
 						Name:  "stop",
 						Usage: "stop the specified app",
 						Action: func(c *cli.Context) error {
-							fmt.Println("Stopping edgeapp: ", c.Args().First())
-							currentFormattedTime := utils.GetFormattedDateTime(time.Now())
-							var task tasks.Task
-							task.ID = 0
-							task.Task = "stop_edgeapp"
-							task.Args = sql.NullString{String: fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), Valid: true}
-							task.Status = fmt.Sprintf("%d", tasks.STATUS_CREATED)
-							task.Created = currentFormattedTime
-							task.Updated = currentFormattedTime
-							task = tasks.ExecuteTask(task)
-							return nil
+
+							task := tasks.ExecuteTask(tasks.GetBaseTask(
+								"stop_edgeapp",
+								fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()),
+							))
+
+							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
 						},
 					},
 				},
