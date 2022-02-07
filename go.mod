@@ -13,6 +13,7 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-sqlite3 v1.14.7 // indirect
+	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/shirou/gopsutil v3.21.4+incompatible // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/urfave/cli/v2 v2.3.0 // indirect

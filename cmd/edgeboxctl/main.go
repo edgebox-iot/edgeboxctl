@@ -11,11 +11,15 @@ import (
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/tasks"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
-	"github.com/urfave/cli/v2" // imports as package "cli"
+	"github.com/mitchellh/colorstring"
+	"github.com/urfave/cli/v2" // imports as package "cli",
 )
 
 const defaultNotReadySleepTime time.Duration = time.Second * 60
 const defaultSleepTime time.Duration = time.Second
+
+var errorMissingApplicationSlug = colorstring.Color("[red]Error: [white]Missing application slug")
+var errorUnexpected = colorstring.Color("[red]An unexpected error ocurring and the application crashed")
 
 func main() {
 
@@ -29,7 +33,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:    "bootstrap",
-				Aliases: []string{"a"},
+				Aliases: []string{"b"},
 				Usage:   "Setps up initial structure and dependencies for the edgebox system",
 				Action: func(c *cli.Context) error {
 					fmt.Println("Edgebox Setup")
@@ -38,13 +42,19 @@ func main() {
 			},
 			{
 				Name:    "app",
-				Aliases: []string{"t"},
+				Aliases: []string{"a"},
 				Usage:   "options for edgeapp management",
 				Subcommands: []*cli.Command{
 					{
-						Name:  "start",
-						Usage: "start the specified app",
+						Name:    "start",
+						Aliases: []string{"s"},
+						Usage:   "start the specified app",
 						Action: func(c *cli.Context) error {
+
+							if c.Args().Get(0) == "" {
+								return cli.Exit(errorMissingApplicationSlug, 1)
+							}
+
 							task := tasks.ExecuteTask(tasks.GetBaseTask(
 								"start_edgeapp",
 								fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()),
@@ -57,6 +67,10 @@ func main() {
 						Name:  "stop",
 						Usage: "stop the specified app",
 						Action: func(c *cli.Context) error {
+
+							if c.Args().Get(0) == "" {
+								return cli.Exit(errorMissingApplicationSlug, 1)
+							}
 
 							task := tasks.ExecuteTask(tasks.GetBaseTask(
 								"stop_edgeapp",
