@@ -96,6 +96,16 @@ func main() {
 				Usage:   "options for edgeapp management",
 				Subcommands: []*cli.Command{
 					{
+						Name:    "list",
+						Aliases: []string{"i"},
+						Usage:   "list currently installed apps and their status",
+						Action: func(c *cli.Context) error {
+							task := getCommandTask("list_edgeapps", "", true)
+							// return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+							return cli.Exit(task.Result.String, 0)
+						},
+					},
+					{
 						Name:    "install",
 						Aliases: []string{"i"},
 						Usage:   "install the specified app (slug or package file)",

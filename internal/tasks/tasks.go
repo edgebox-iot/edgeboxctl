@@ -161,6 +161,12 @@ func ExecuteTask(task Task) Task {
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
+		case "list_edgeapps":
+
+			log.Println("Fetching current status on Edgeapps...")
+			taskResult := taskGetEdgeApps()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
 		case "install_edgeapp":
 
 			log.Println("Installing EdgeApp...")
