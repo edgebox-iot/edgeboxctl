@@ -20,6 +20,7 @@ const defaultSleepTime time.Duration = time.Second
 
 var errorMissingApplicationSlug = colorstring.Color("[red]Error: [white]Missing application slug")
 var errorUnexpected = colorstring.Color("[red]An unexpected error ocurring and the application crashed")
+var notYetImplemented = colorstring.Color("[yellow]This feature is not yet implemented, this command is only a stub.")
 
 func main() {
 
@@ -38,6 +39,55 @@ func main() {
 				Action: func(c *cli.Context) error {
 					fmt.Println("Edgebox Setup")
 					return nil
+				},
+			},
+			{
+				Name:    "tunnel",
+				Aliases: []string{"t"},
+				Usage:   "Edgebox tunnel settings",
+				Subcommands: []*cli.Command{
+					{
+						Name:    "setup",
+						Aliases: []string{"s"},
+						Usage:   "Sets up an encrypted secure connection to a tunnel",
+						Action: func(c *cli.Context) error {
+
+							argumentError := checkArgumentsPresence(c, 4)
+							if argumentError != nil {
+								return argumentError
+							}
+
+							task := getCommandTask(
+								"setup_tunnel",
+								fmt.Sprintf(
+									"{\"bootnode_address\": \"%s\", \"token\": \"%s\", \"assigned_address\": \"%s\", \"node_name\": \"%s\"}",
+									c.Args().Get(0),
+									c.Args().Get(1),
+									c.Args().Get(2),
+									c.Args().Get(3),
+								),
+								true,
+							)
+
+							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+						},
+					},
+					{
+						Name:    "enable",
+						Aliases: []string{"e"},
+						Usage:   "enables the public tunnel (when configured)",
+						Action: func(c *cli.Context) error {
+							return cli.Exit(notYetImplemented, 1)
+						},
+					},
+					{
+						Name:    "disable",
+						Aliases: []string{"d"},
+						Usage:   "disables the public tunnel (when online)",
+						Action: func(c *cli.Context) error {
+							return cli.Exit(notYetImplemented, 1)
+						},
+					},
 				},
 			},
 			{
