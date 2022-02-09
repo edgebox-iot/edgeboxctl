@@ -46,38 +46,151 @@ func main() {
 				Usage:   "options for edgeapp management",
 				Subcommands: []*cli.Command{
 					{
-						Name:    "start",
-						Aliases: []string{"s"},
-						Usage:   "start the specified app",
+						Name:    "install",
+						Aliases: []string{"i"},
+						Usage:   "install the specified app (slug or package file)",
 						Action: func(c *cli.Context) error {
 
-							if c.Args().Get(0) == "" {
-								return cli.Exit(errorMissingApplicationSlug, 1)
+							argumentError := checkArgumentsPresence(c, 1)
+							if argumentError != nil {
+								return argumentError
 							}
 
-							task := tasks.ExecuteTask(tasks.GetBaseTask(
-								"start_edgeapp",
-								fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()),
-							))
+							task := getCommandTask("install_edgeapp", fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), true)
 
 							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
 						},
 					},
 					{
-						Name:  "stop",
-						Usage: "stop the specified app",
+						Name:    "remove",
+						Aliases: []string{"r"},
+						Usage:   "remove the specified app",
 						Action: func(c *cli.Context) error {
 
-							if c.Args().Get(0) == "" {
-								return cli.Exit(errorMissingApplicationSlug, 1)
+							argumentError := checkArgumentsPresence(c, 1)
+							if argumentError != nil {
+								return argumentError
 							}
 
-							task := tasks.ExecuteTask(tasks.GetBaseTask(
-								"stop_edgeapp",
-								fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()),
-							))
+							task := getCommandTask("remove_edgeapp", fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), true)
 
 							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+						},
+					},
+					{
+						Name:    "start",
+						Aliases: []string{"s"},
+						Usage:   "start the specified app",
+						Action: func(c *cli.Context) error {
+
+							argumentError := checkArgumentsPresence(c, 1)
+							if argumentError != nil {
+								return argumentError
+							}
+
+							task := getCommandTask("start_edgeapp", fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), true)
+
+							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+						},
+					},
+					{
+						Name:    "stop",
+						Aliases: []string{"k"},
+						Usage:   "stop the specified app",
+						Action: func(c *cli.Context) error {
+
+							argumentError := checkArgumentsPresence(c, 1)
+							if argumentError != nil {
+								return argumentError
+							}
+
+							task := getCommandTask("stop_edgeapp", fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), true)
+
+							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+						},
+					},
+					{
+						Name:    "online",
+						Aliases: []string{"o"},
+						Usage:   "set an app status for online access",
+						Subcommands: []*cli.Command{
+							{
+								Name:    "enable",
+								Aliases: []string{"e"},
+								Usage:   "set an app as accessible online",
+								Action: func(c *cli.Context) error {
+
+									argumentError := checkArgumentsPresence(c, 2)
+									if argumentError != nil {
+										return argumentError
+									}
+
+									task := getCommandTask(
+										"enable_online",
+										fmt.Sprintf(
+											"{\"id\": \"%s\", \"internet_url\": \"%s\"}",
+											c.Args().Get(0),
+											c.Args().Get(1),
+										),
+										true,
+									)
+
+									return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+								},
+							},
+							{
+								Name:    "disable",
+								Aliases: []string{"d"},
+								Usage:   "set an app as local-network private",
+								Action: func(c *cli.Context) error {
+
+									argumentError := checkArgumentsPresence(c, 1)
+									if argumentError != nil {
+										return argumentError
+									}
+
+									task := getCommandTask("disable_online", fmt.Sprintf("{\"id\": \"%s\"}", c.Args().First()), true)
+
+									return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name:    "dashboard",
+				Aliases: []string{"d"},
+				Usage:   "set dashboard access",
+				Subcommands: []*cli.Command{
+					{
+						Name:    "enable",
+						Aliases: []string{"e"},
+						Usage:   "enable dashboard access",
+						Action: func(c *cli.Context) error {
+							argumentError := checkArgumentsPresence(c, 1)
+							if argumentError != nil {
+								return argumentError
+							}
+
+							task := getCommandTask("enable_public_dashboard", fmt.Sprintf("{\"internet_url\": \"%s\"}", c.Args().First()), true)
+							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+						},
+					},
+					{
+						Name:    "disable",
+						Aliases: []string{"d"},
+						Usage:   "disable dashboard access",
+						Action: func(c *cli.Context) error {
+
+							argumentError := checkArgumentsPresence(c, 1)
+							if argumentError != nil {
+								return argumentError
+							}
+
+							task := getCommandTask("disable_public_dashboard", "", true)
+							return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
+
 						},
 					},
 				},
@@ -89,6 +202,30 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func checkArgumentsPresence(c *cli.Context, count int) error {
+	if count != 0 {
+		for i := 0; i < count; i++ {
+			if c.Args().Get(i) == "" {
+				return cli.Exit(errorMissingApplicationSlug, 1)
+			}
+		}
+	}
+	return nil
+}
+
+func getCommandTask(taskSlug string, taskArgs string, execute bool) tasks.Task {
+	task := tasks.GetBaseTask(
+		taskSlug,
+		taskArgs,
+	)
+
+	if execute {
+		task = tasks.ExecuteTask(task)
+	}
+
+	return task
 }
 
 func startService() {
