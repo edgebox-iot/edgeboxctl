@@ -97,7 +97,7 @@ func main() {
 				Subcommands: []*cli.Command{
 					{
 						Name:    "list",
-						Aliases: []string{"i"},
+						Aliases: []string{"l"},
 						Usage:   "list currently installed apps and their status",
 						Action: func(c *cli.Context) error {
 							task := getCommandTask("list_edgeapps", "", true)

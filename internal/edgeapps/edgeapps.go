@@ -236,7 +236,7 @@ func GetEdgeAppStatus(ID string) EdgeAppStatus {
 
 }
 
-// GetEdgeAppServices : Returns a
+// GetEdgeAppServices : Returns a list of services for a single edgeapp
 func GetEdgeAppServices(ID string) []EdgeAppService {
 
 	cmdArgs := []string{"-r", ".services | keys[]", utils.GetPath("edgeAppsPath") + ID + configFilename}
