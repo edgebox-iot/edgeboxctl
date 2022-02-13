@@ -35,7 +35,7 @@ func main() {
 			{
 				Name:    "bootstrap",
 				Aliases: []string{"b"},
-				Usage:   "Setps up initial structure and dependencies for the edgebox system",
+				Usage:   "Sets up initial structure and dependencies for the edgebox system",
 				Action: func(c *cli.Context) error {
 					fmt.Println("Edgebox Setup")
 					return nil
