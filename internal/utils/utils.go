@@ -191,7 +191,7 @@ func WriteOption(optionKey string, optionValue string) {
 
 // IsSystemReady : Checks hability of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
 func IsSystemReady() bool {
-	_, err := os.Stat("/home/system/components/ws/.ready")
+	_, err := os.Stat(GetPath("wsPath") + ".ready")
 	return !os.IsNotExist(err)
 }
 
