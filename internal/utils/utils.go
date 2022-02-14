@@ -93,7 +93,7 @@ func GetSQLiteDbConnectionDetails() string {
 
 }
 
-// GetFormattedDateTime: Given a Time, Returns a string that is formatted ready to be inserted into an SQLite Datetime field using sql.Prepare.
+// GetFormattedDateTime: Given a Time, Returns a string that is formatted to be passed around the application, including correctly inserting SQLite Datetime field using sql.Prepare.
 func GetFormattedDateTime(t time.Time) string {
 	// This date is used to indicate the layout.
 	const datetimeLayout = "2006-01-02 15:04:05"
@@ -187,6 +187,17 @@ func WriteOption(optionKey string, optionValue string) {
 	}
 
 	db.Close()
+}
+
+// IsSystemReady : Checks hability of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
+func IsSystemReady() bool {
+	_, err := os.Stat("/home/system/components/ws/.ready")
+	return !os.IsNotExist(err)
+}
+
+// IsDatabaseReady : Checks is it can successfully connect to the task queue db
+func IsDatabaseReady() bool {
+	return false
 }
 
 func ColorJsonString(jsonString string) string {

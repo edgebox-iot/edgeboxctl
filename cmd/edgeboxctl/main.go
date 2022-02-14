@@ -19,8 +19,8 @@ const defaultNotReadySleepTime time.Duration = time.Second * 60
 const defaultSleepTime time.Duration = time.Second
 
 var errorMissingApplicationSlug = colorstring.Color("[red]Error: [white]Missing application slug")
-var errorUnexpected = colorstring.Color("[red]An unexpected error ocurring and the application crashed")
-var notYetImplemented = colorstring.Color("[yellow]This feature is not yet implemented, this command is only a stub.")
+var errorSystemNotReady = colorstring.Color("[red]Eror: [white]The system is not ready to run. \n[white]Please run 'cd /home/system/components/ws/ && ./ws -b' first.")
+var errorNotYetImplemented = colorstring.Color("[yellow]This feature is not yet implemented, this command is only a stub.")
 
 func main() {
 
@@ -37,8 +37,7 @@ func main() {
 				Aliases: []string{"b"},
 				Usage:   "Sets up initial structure and dependencies for the edgebox system",
 				Action: func(c *cli.Context) error {
-					fmt.Println("Edgebox Setup")
-					return nil
+					return cli.Exit(errorNotYetImplemented, 1)
 				},
 			},
 			{
@@ -50,6 +49,7 @@ func main() {
 						Name:    "setup",
 						Aliases: []string{"s"},
 						Usage:   "Sets up an encrypted secure connection to a tunnel",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
 
 							argumentError := checkArgumentsPresence(c, 4)
@@ -76,16 +76,18 @@ func main() {
 						Name:    "enable",
 						Aliases: []string{"e"},
 						Usage:   "enables the public tunnel (when configured)",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
-							return cli.Exit(notYetImplemented, 1)
+							return cli.Exit(errorNotYetImplemented, 1)
 						},
 					},
 					{
 						Name:    "disable",
 						Aliases: []string{"d"},
 						Usage:   "disables the public tunnel (when online)",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
-							return cli.Exit(notYetImplemented, 1)
+							return cli.Exit(errorNotYetImplemented, 1)
 						},
 					},
 				},
@@ -99,6 +101,7 @@ func main() {
 						Name:    "list",
 						Aliases: []string{"l"},
 						Usage:   "list currently installed apps and their status",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
 							task := getCommandTask("list_edgeapps", "", true)
 							// return cli.Exit(utils.ColorJsonString(task.Result.String), 0)
@@ -109,6 +112,7 @@ func main() {
 						Name:    "install",
 						Aliases: []string{"i"},
 						Usage:   "install the specified app (slug or package file)",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
 
 							argumentError := checkArgumentsPresence(c, 1)
@@ -125,6 +129,7 @@ func main() {
 						Name:    "remove",
 						Aliases: []string{"r"},
 						Usage:   "remove the specified app",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
 
 							argumentError := checkArgumentsPresence(c, 1)
@@ -141,6 +146,7 @@ func main() {
 						Name:    "start",
 						Aliases: []string{"s"},
 						Usage:   "start the specified app",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
 
 							argumentError := checkArgumentsPresence(c, 1)
@@ -157,6 +163,7 @@ func main() {
 						Name:    "stop",
 						Aliases: []string{"k"},
 						Usage:   "stop the specified app",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
 
 							argumentError := checkArgumentsPresence(c, 1)
@@ -178,6 +185,7 @@ func main() {
 								Name:    "enable",
 								Aliases: []string{"e"},
 								Usage:   "set an app as accessible online",
+								Before:  canRunCommands,
 								Action: func(c *cli.Context) error {
 
 									argumentError := checkArgumentsPresence(c, 2)
@@ -202,6 +210,7 @@ func main() {
 								Name:    "disable",
 								Aliases: []string{"d"},
 								Usage:   "set an app as local-network private",
+								Before:  canRunCommands,
 								Action: func(c *cli.Context) error {
 
 									argumentError := checkArgumentsPresence(c, 1)
@@ -227,6 +236,7 @@ func main() {
 						Name:    "enable",
 						Aliases: []string{"e"},
 						Usage:   "enable dashboard access",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
 							argumentError := checkArgumentsPresence(c, 1)
 							if argumentError != nil {
@@ -241,6 +251,7 @@ func main() {
 						Name:    "disable",
 						Aliases: []string{"d"},
 						Usage:   "disable dashboard access",
+						Before:  canRunCommands,
 						Action: func(c *cli.Context) error {
 
 							argumentError := checkArgumentsPresence(c, 1)
@@ -262,6 +273,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func canRunCommands(c *cli.Context) error {
+	if !utils.IsSystemReady() {
+		return cli.Exit(errorSystemNotReady, 1)
+	}
+
+	return nil
 }
 
 func checkArgumentsPresence(c *cli.Context, count int) error {
@@ -309,7 +328,6 @@ func startService() {
 	}()
 
 	printVersion()
-
 	printDbDetails()
 
 	tick := 0
@@ -317,7 +335,7 @@ func startService() {
 	// infinite loop
 	for {
 
-		if isSystemReady() {
+		if utils.IsSystemReady() {
 			tick++ // Tick is an int, so eventually will "go out of ticks?" Maybe we want to reset the ticks every once in a while, to avoid working with big numbers...
 			systemIterator(tick)
 		} else {
@@ -348,17 +366,6 @@ func printDbDetails() {
 	)
 }
 
-// IsSystemReady : Checks hability of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
-func isSystemReady() bool {
-	_, err := os.Stat("/home/system/components/ws/.ready")
-	return !os.IsNotExist(err)
-}
-
-// IsDatabaseReady : Checks is it can successfully connect to the task queue db
-func isDatabaseReady() bool {
-	return false
-}
-
 func systemIterator(tick int) {
 
 	log.Printf("Tick is %d", tick)
@@ -376,7 +383,7 @@ func systemIterator(tick int) {
 		log.Printf("No tasks to execute.")
 	}
 
-	// Wait about 1 second before resumming operations.
+	// Wait about 1 second before resuming operations.
 	log.Printf("Next instruction will be executed 1 second")
 	time.Sleep(defaultSleepTime)
 
