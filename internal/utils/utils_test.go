@@ -89,8 +89,7 @@ func TestGetPath(t *testing.T) {
 		t.Fail()
 	}
 
-	validPathKey := "wsPath"
-	result = GetPath(validPathKey)
+	result = GetPath(WsPath)
 	if result != "/home/system/components/ws/" {
 		t.Log("Expected /home/system/components/ws/ but got", result)
 		t.Fail()
