@@ -189,7 +189,7 @@ func WriteOption(optionKey string, optionValue string) {
 	db.Close()
 }
 
-// IsSystemReady : Checks hability of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
+// IsSystemReady : Checks readiness of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
 func IsSystemReady() bool {
 	_, err := os.Stat(GetPath("wsPath") + ".ready")
 	return !os.IsNotExist(err)
