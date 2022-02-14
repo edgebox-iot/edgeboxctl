@@ -56,14 +56,14 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 		Valid:   false,
 	}
 
-	_, err := os.Stat(utils.GetPath("edgeAppsPath") + ID + configFilename)
+	_, err := os.Stat(utils.GetPath(utils.EdgeAppsPath) + ID + configFilename)
 	if !os.IsNotExist(err) {
 		// File exists. Start digging!
 
 		edgeAppName := ID
 		edgeAppDescription := ""
 
-		edgeAppEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + ID + envFilename)
+		edgeAppEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + envFilename)
 
 		if err != nil {
 			log.Println("Error loading .env file for edgeapp " + edgeAppName)
@@ -79,7 +79,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 		edgeAppInternetAccessible := false
 		edgeAppInternetURL := ""
 
-		myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename)
+		myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + myEdgeAppServiceEnvFilename)
 		if err != nil {
 			log.Println("No myedge.app environment file found. Status is Network-Only")
 		} else {
@@ -113,7 +113,7 @@ func IsEdgeAppInstalled(ID string) bool {
 
 	result := false
 
-	_, err := os.Stat(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
+	_, err := os.Stat(utils.GetPath(utils.EdgeAppsPath) + ID + runnableFilename)
 	if !os.IsNotExist(err) {
 		result = true
 	}
@@ -125,11 +125,12 @@ func IsEdgeAppInstalled(ID string) bool {
 func SetEdgeAppInstalled(ID string) bool {
 
 	result := true
+	edgeAppPath := utils.GetPath(utils.EdgeAppsPath)
 
-	_, err := os.Stat(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
+	_, err := os.Stat(edgeAppPath + ID + runnableFilename)
 	if os.IsNotExist(err) {
 
-		_, err := os.Create(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
+		_, err := os.Create(edgeAppPath + ID + runnableFilename)
 		result = true
 
 		if err != nil {
@@ -153,7 +154,7 @@ func SetEdgeAppInstalled(ID string) bool {
 func SetEdgeAppNotInstalled(ID string) bool {
 
 	result := true
-	err := os.Remove(utils.GetPath("edgeAppsPath") + ID + runnableFilename)
+	err := os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + runnableFilename)
 	if err != nil {
 		result = false
 		log.Fatal(err)
@@ -172,7 +173,7 @@ func GetEdgeApps() []EdgeApp {
 
 	// Building list of available edgeapps in the system with their status
 
-	files, err := ioutil.ReadDir(utils.GetPath("edgeAppsPath"))
+	files, err := ioutil.ReadDir(utils.GetPath(utils.EdgeAppsPath))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -237,16 +238,16 @@ func GetEdgeAppStatus(ID string) EdgeAppStatus {
 
 // GetEdgeAppServices : Returns a
 func GetEdgeAppServices(ID string) []EdgeAppService {
-
-	cmdArgs := []string{"-r", ".services | keys[]", utils.GetPath("edgeAppsPath") + ID + configFilename}
-	servicesString := utils.Exec(utils.GetPath("wsPath"), "yq", cmdArgs)
+	wsPath := utils.GetPath(utils.WsPath)
+	cmdArgs := []string{"-r", ".services | keys[]", utils.GetPath(utils.EdgeAppsPath) + ID + configFilename}
+	servicesString := utils.Exec(utils.GetPath(utils.WsPath), "yq", cmdArgs)
 	serviceSlices := strings.Split(servicesString, "\n")
 	serviceSlices = utils.DeleteEmptySlices(serviceSlices)
 	var edgeAppServices []EdgeAppService
 
 	for _, serviceID := range serviceSlices {
-		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "exec", "-T", serviceID, "echo", "'Service Check'"}
-		cmdResult := utils.Exec(utils.GetPath("wsPath"), "docker-compose", cmdArgs)
+		cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "exec", "-T", serviceID, "echo", "'Service Check'"}
+		cmdResult := utils.Exec(wsPath, "docker-compose", cmdArgs)
 		isRunning := false
 		if cmdResult != "" {
 			isRunning = true
@@ -260,16 +261,14 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 
 // RunEdgeApp : Run an EdgeApp and return its most current status
 func RunEdgeApp(ID string) EdgeAppStatus {
-
+	wsPath := utils.GetPath(utils.WsPath)
 	services := GetEdgeAppServices(ID)
-
 	cmdArgs := []string{}
 
 	for _, service := range services {
 
-		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "start", service.ID}
-		utils.Exec(utils.GetPath("wsPath"), "docker-compose", cmdArgs)
-
+		cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "start", service.ID}
+		utils.Exec(wsPath, "docker-compose", cmdArgs)
 	}
 
 	// Wait for it to settle up before continuing...
@@ -281,16 +280,13 @@ func RunEdgeApp(ID string) EdgeAppStatus {
 
 // StopEdgeApp : Stops an EdgeApp and return its most current status
 func StopEdgeApp(ID string) EdgeAppStatus {
-
+	wsPath := utils.GetPath(utils.WsPath)
 	services := GetEdgeAppServices(ID)
-
 	cmdArgs := []string{}
-
 	for _, service := range services {
 
-		cmdArgs = []string{"-f", utils.GetPath("wsPath") + "/docker-compose.yml", "stop", service.ID}
-		utils.Exec(utils.GetPath("wsPath"), "docker-compose", cmdArgs)
-
+		cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "stop", service.ID}
+		utils.Exec(wsPath, "docker-compose", cmdArgs)
 	}
 
 	// Wait for it to settle up before continuing...
@@ -306,7 +302,7 @@ func EnableOnline(ID string, InternetURL string) MaybeEdgeApp {
 	maybeEdgeApp := GetEdgeApp(ID)
 	if maybeEdgeApp.Valid { // We're only going to do this operation if the EdgeApp actually exists.
 		// Create the myedgeapp.env file and add the InternetURL entry to it
-		envFilePath := utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename
+		envFilePath := utils.GetPath(utils.EdgeAppsPath) + ID + myEdgeAppServiceEnvFilename
 		env, _ := godotenv.Unmarshal("INTERNET_URL=" + InternetURL)
 		_ = godotenv.Write(env, envFilePath)
 	}
@@ -320,13 +316,13 @@ func EnableOnline(ID string, InternetURL string) MaybeEdgeApp {
 // DisableOnline : Removes env files necessary for system external access config. Rebuilds containers in project (in case of change only).
 func DisableOnline(ID string) MaybeEdgeApp {
 
-	envFilePath := utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename
+	envFilePath := utils.GetPath(utils.EdgeAppsPath) + ID + myEdgeAppServiceEnvFilename
 	_, err := godotenv.Read(envFilePath)
 	if err != nil {
 		log.Println("myedge.app environment file for " + ID + " not found. No need to delete.")
 	} else {
 		cmdArgs := []string{envFilePath}
-		utils.Exec(utils.GetPath("wsPath"), "rm", cmdArgs)
+		utils.Exec(utils.GetPath(utils.WsPath), "rm", cmdArgs)
 	}
 
 	buildFrameworkContainers()
@@ -337,7 +333,7 @@ func DisableOnline(ID string) MaybeEdgeApp {
 
 func EnablePublicDashboard(InternetURL string) bool {
 
-	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
+	envFilePath := utils.GetPath(utils.ApiPath) + myEdgeAppServiceEnvFilename
 	env, _ := godotenv.Unmarshal("INTERNET_URL=" + InternetURL)
 	_ = godotenv.Write(env, envFilePath)
 
@@ -348,28 +344,29 @@ func EnablePublicDashboard(InternetURL string) bool {
 }
 
 func DisablePublicDashboard() bool {
-	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
+	envFilePath := utils.GetPath(utils.ApiPath) + myEdgeAppServiceEnvFilename
 	if !IsPublicDashboard() {
 		log.Println("myedge.app environment file for the dashboard / api not found. No need to delete.")
 		return false
 	}
 
 	cmdArgs := []string{envFilePath}
-	utils.Exec(utils.GetPath("apiPath"), "rm", cmdArgs)
+	utils.Exec(utils.GetPath(utils.ApiPath), "rm", cmdArgs)
 	buildFrameworkContainers()
 	return true
 }
 
 func IsPublicDashboard() bool {
-	envFilePath := utils.GetPath("apiPath") + myEdgeAppServiceEnvFilename
+	envFilePath := utils.GetPath(utils.ApiPath) + myEdgeAppServiceEnvFilename
 	_, err := godotenv.Read(envFilePath)
 	return err == nil
 }
 
 func buildFrameworkContainers() {
 
-	cmdArgs := []string{utils.GetPath("wsPath") + "ws", "--build"}
-	utils.ExecAndStream(utils.GetPath("wsPath"), "sh", cmdArgs)
+	wsPath := utils.GetPath(utils.WsPath)
+	cmdArgs := []string{wsPath + "ws", "--build"}
+	utils.ExecAndStream(wsPath, "sh", cmdArgs)
 
 	time.Sleep(defaultContainerOperationSleepTime)
 
