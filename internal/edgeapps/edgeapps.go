@@ -81,7 +81,8 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 
 		myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath("edgeAppsPath") + ID + myEdgeAppServiceEnvFilename)
 		if err != nil {
-			log.Println("No myedge.app environment file found. Status is Network-Only")
+			// log.Println("No myedge.app environment file found. Status is Network-Only")
+			// File probably not found!
 		} else {
 			if myEdgeAppServiceEnv["INTERNET_URL"] != "" {
 				edgeAppInternetAccessible = true
@@ -235,7 +236,7 @@ func GetEdgeAppStatus(ID string) EdgeAppStatus {
 
 }
 
-// GetEdgeAppServices : Returns a
+// GetEdgeAppServices : Returns a list of services for a single edgeapp
 func GetEdgeAppServices(ID string) []EdgeAppService {
 
 	cmdArgs := []string{"-r", ".services | keys[]", utils.GetPath("edgeAppsPath") + ID + configFilename}

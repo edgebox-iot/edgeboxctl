@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TylerBrock/colorjson"
 	"github.com/joho/godotenv"
 )
 
@@ -91,8 +93,8 @@ func GetSQLiteDbConnectionDetails() string {
 
 }
 
-// GetSQLiteFormattedDateTime: Given a Time, Returns a string that is formatted ready to be inserted into an SQLite Datetime field using sql.Prepare.
-func GetSQLiteFormattedDateTime(t time.Time) string {
+// GetFormattedDateTime: Given a Time, Returns a string that is formatted to be passed around the application, including correctly inserting SQLite Datetime field using sql.Prepare.
+func GetFormattedDateTime(t time.Time) string {
 	// This date is used to indicate the layout.
 	const datetimeLayout = "2006-01-02 15:04:05"
 	formatedDatetime := t.Format(datetimeLayout)
@@ -177,7 +179,7 @@ func WriteOption(optionKey string, optionValue string) {
 		log.Fatal(err.Error())
 	}
 
-	formatedDatetime := GetSQLiteFormattedDateTime(time.Now())
+	formatedDatetime := GetFormattedDateTime(time.Now())
 
 	_, err = statement.Exec(optionKey, optionValue, formatedDatetime, formatedDatetime) // Execute SQL Statement
 	if err != nil {
@@ -185,4 +187,22 @@ func WriteOption(optionKey string, optionValue string) {
 	}
 
 	db.Close()
+}
+
+// IsSystemReady : Checks readiness of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
+func IsSystemReady() bool {
+	_, err := os.Stat(GetPath("wsPath") + ".ready")
+	return !os.IsNotExist(err)
+}
+
+// IsDatabaseReady : Checks is it can successfully connect to the task queue db
+func IsDatabaseReady() bool {
+	return false
+}
+
+func ColorJsonString(jsonString string) string {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(jsonString), &obj)
+	resultJSON, _ := colorjson.Marshal(obj)
+	return string(resultJSON)
 }
