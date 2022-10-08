@@ -99,7 +99,7 @@ func printDbDetails() {
 
 // IsSystemReady : Checks hability of the service to execute commands (Only after "edgebox --build" is ran at least once via SSH, or if built for distribution)
 func isSystemReady() bool {
-	_, err := os.Stat("/home/system/components/ws/.ready")
+	_, err := os.Stat(utils.GetPath(utils.WsPath) + ".ready")
 	return !os.IsNotExist(err)
 }
 

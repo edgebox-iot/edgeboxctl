@@ -81,7 +81,7 @@ func DeleteEmptySlices(s []string) []string {
 func GetSQLiteDbConnectionDetails() string {
 
 	var apiEnv map[string]string
-	apiEnv, err := godotenv.Read(GetPath("apiEnvFileLocation"))
+	apiEnv, err := godotenv.Read(GetPath(ApiEnvFileLocation))
 
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -100,6 +100,12 @@ func GetSQLiteFormattedDateTime(t time.Time) string {
 	return formatedDatetime
 }
 
+const CloudEnvFileLocation string = "cloudEnvFileLocation"
+const ApiEnvFileLocation string = "apiEnvFileLocation"
+const ApiPath string = "apiPath"
+const EdgeAppsPath string = "edgeAppsPath"
+const WsPath string = "wsPath"
+
 // GetPath : Returns either the hardcoded path, or a overwritten value via .env file at project root. Register paths here for seamless working code between dev and prod environments ;)
 func GetPath(pathKey string) string {
 
@@ -113,7 +119,7 @@ func GetPath(pathKey string) string {
 	}
 
 	switch pathKey {
-	case "cloudEnvFileLocation":
+	case CloudEnvFileLocation:
 
 		if env["CLOUD_ENV_FILE_LOCATION"] != "" {
 			targetPath = env["CLOUD_ENV_FILE_LOCATION"]
@@ -121,7 +127,7 @@ func GetPath(pathKey string) string {
 			targetPath = "/home/system/components/edgeboxctl/cloud.env"
 		}
 
-	case "apiEnvFileLocation":
+	case ApiEnvFileLocation:
 
 		if env["API_ENV_FILE_LOCATION"] != "" {
 			targetPath = env["API_ENV_FILE_LOCATION"]
@@ -129,15 +135,15 @@ func GetPath(pathKey string) string {
 			targetPath = "/home/system/components/api/edgebox.env"
 		}
 
-	case "apiPath":
+	case ApiPath:
 
 		if env["API_PATH"] != "" {
-			targetPath = env["APT_PATH"]
+			targetPath = env["API_PATH"]
 		} else {
 			targetPath = "/home/system/components/api/"
 		}
 
-	case "edgeAppsPath":
+	case EdgeAppsPath:
 
 		if env["EDGEAPPS_PATH"] != "" {
 			targetPath = env["EDGEAPPS_PATH"]
@@ -145,7 +151,7 @@ func GetPath(pathKey string) string {
 			targetPath = "/home/system/components/apps/"
 		}
 
-	case "wsPath":
+	case WsPath:
 
 		if env["WS_PATH"] != "" {
 			targetPath = env["WS_PATH"]

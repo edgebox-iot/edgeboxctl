@@ -224,9 +224,9 @@ func getDevicesSpaceUsage(devices []Device) []Device {
 					bucketsUsageSplit := (uint64)(0)
 					othersUsageSplit := (uint64)(0)
 
-					edgeappsDirSize, _ := getDirSize(utils.GetPath("edgeAppsPath"))
+					edgeappsDirSize, _ := getDirSize(utils.GetPath(utils.EdgeAppsPath))
 					// TODO for later: Figure out to get correct paths for each partition...
-					wsAppDataDirSize, _ := getDirSize("/home/system/components/ws/appdata")
+					wsAppDataDirSize, _ := getDirSize(utils.GetPath(utils.WsPath) + "/appdata")
 
 					if partition.Mountpoint == "/" {
 						edgeappsUsageSplit = edgeappsDirSize + wsAppDataDirSize
