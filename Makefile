@@ -13,7 +13,7 @@ build-prod:
 	GOOS=linux GOARCH=arm RELEASE=prod make build
 
 build-cloud:
-	GOOS=linux GOARCH=amd64 RELEASE=cloud make build
+	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 RELEASE=cloud make build
 
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
