@@ -1,21 +1,3 @@
-
-<!-- PROJECT SHIELDS -->
-<!--
-*** Using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
-
-
-
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
@@ -27,8 +9,6 @@
 
   <p align="center">
     A System Control module written in Go. Its resonsability is to configure dependencies and perform system tasks, automatically in a schedule, or by command.
-    <br />
-    <a href="https://github.com/github_username/edgeboxctl"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/github_username/edgeboxctl/issues">Report Bug</a>
@@ -60,7 +40,7 @@
 
 [![Edgebox Screen Shot][product-screenshot]](https://edgebox.co)
 
-Edgebox is a small box that connects alongside your home internet router. It brings powerful features that go alongside or can even completely replace various services that you already use in the day-to-day.
+Edgebox is an easy to configure and use system. It brings powerful features that go alongside or can even completely replace various services that you already use in the day-to-day.
 
 
 ### Built With
@@ -142,19 +122,3 @@ Contributions are what make the open source community such an amazing place to b
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/edgebox-iot/edgeboxctl.svg?style=flat-square
-[contributors-url]: https://github.com/edgebox-iot/edgeboxctl/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/edgebox-iot/edgeboxctl.svg?style=flat-square
-[forks-url]: https://github.com/edgebox-iot/edgeboxctl/network/members
-[stars-shield]: https://img.shields.io/github/stars/edgebox-iot/edgeboxctl.svg?style=flat-square
-[stars-url]: https://github.com/edgebox-iot/edgeboxctl/stargazers
-[issues-shield]: https://img.shields.io/github/issues/edgebox-iot/edgeboxctl.svg?style=flat-square
-[issues-url]: https://github.com/edgebox-iot/edgeboxctl/issues
-[license-shield]: https://img.shields.io/github/license/edgebox-iot/edgeboxctl.svg?style=flat-square
-[license-url]: https://github.com/edgebox-iot/edgeboxctl/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/edgebox-iot
