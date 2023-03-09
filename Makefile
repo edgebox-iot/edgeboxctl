@@ -33,3 +33,10 @@ test:
 
 test-with-coverage:
 	go test -tags=unit -timeout=600s -v ./... -coverprofile=coverage.out
+
+install: build-cloud
+	cp ./bin/edgeboxctl /usr/local/bin/edgeboxctl
+	cp ./edgeboxctl/edgeboxctl.service /lib/systemd/system/edgeboxctl.service
+	systemctl daemon-reload
+	@echo "Edgeboxctl installed successfully"
+	@echo "To start edgeboxctl run: systemctl start edgeboxctl"
