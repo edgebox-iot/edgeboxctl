@@ -1,0 +1,29 @@
+[Unit]
+Description=Edgebox Control Module Service
+ConditionPathExists=/home/system/
+After=network.target
+ 
+[Service]
+Type=simple
+User=root
+Group=root
+LimitNOFILE=1024
+
+Restart=on-failure
+RestartSec=10
+startLimitIntervalSec=60
+
+WorkingDirectory=/home/system/components/edgeboxctl
+ExecStart=edgeboxctl --name=edgebox-cloud
+
+# make sure log directory exists and owned by syslog
+PermissionsStartOnly=true
+ExecStartPre=/bin/mkdir -p /var/log/edgeboxctl
+ExecStartPre=/bin/chown root:root /var/log/edgeboxctl
+ExecStartPre=/bin/chmod 755 /var/log/edgeboxctl
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=edgeboxctl
+ 
+[Install]
+WantedBy=multi-user.target
