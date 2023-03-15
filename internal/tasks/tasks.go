@@ -7,6 +7,11 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"os/exec"
+	"strings"
+	"os"
+	"path/filepath"
+	"io/ioutil"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
@@ -134,15 +139,15 @@ func ExecuteTask(task Task) Task {
 		switch task.Task {
 		case "setup_tunnel":
 
-			log.Println("Setting up bootnode connection...")
-			var args taskSetupTunnelArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of setup_bootnode task: %s", err)
-			} else {
-				taskResult := taskSetupTunnel(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
+			log.Println("Setting up Cloudflare connection...")
+			// var args taskSetupTunnelArgs
+			// err := json.Unmarshal([]byte(task.Args.String), &args)
+			// if err != nil {
+				// log.Printf("Error reading arguments of setup_bootnode task: %s", err)
+			// } else {
+			taskResult := taskSetupTunnel()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+			// }
 
 		case "install_edgeapp":
 
@@ -326,21 +331,207 @@ func ExecuteSchedules(tick int) {
 
 }
 
-func taskSetupTunnel(args taskSetupTunnelArgs) string {
+func taskSetupTunnel() string {
 	fmt.Println("Executing taskSetupTunnel")
 
 	wsPath := utils.GetPath(utils.WsPath)
-	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress + ":8655", "--prefix", args.AssignedAddress}
-	utils.Exec(wsPath, "tinc-boot", cmdargs)
+	// cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress + ":8655", "--prefix", args.AssignedAddress}
+	// utils.Exec(wsPath, "tinc-boot", cmdargs)
 
-	cmdargs = []string{"start", "tinc@dnet"}
+	// cmdargs = []string{"start", "tinc@dnet"}
+	// utils.Exec(wsPath, "systemctl", cmdargs)
+
+	// cmdargs = []string{"enable", "tinc@dnet"}
+	// utils.Exec(wsPath, "systemctl", cmdargs)
+
+	// Stop a the service if it is running
+	cmdargs := []string{"stop", "cloudflared"}
 	utils.Exec(wsPath, "systemctl", cmdargs)
 
-	cmdargs = []string{"enable", "tinc@dnet"}
-	utils.Exec(wsPath, "systemctl", cmdargs)
+	cmdargs = []string{"-rf", "/home/system/.cloudflared"}
+	utils.Exec(wsPath, "rm", cmdargs)
 
-	output := "OK" // Better check / logging of command execution result.
-	return output
+	cmdargs = []string{"/home/system/.cloudflared"}
+	utils.Exec(wsPath, "mkdir", cmdargs)
+
+	// The cloudflared command should run in the background. We want to extract the immediate output but leave the command running in the background
+	// to download the certificate.
+
+	cmd := exec.Command("cloudflared", "tunnel", "login", "2>&1", "|", "tee", "/home/system/tunnel_out.txt")
+
+	var status string
+	var url string
+
+  	cmd.Start()
+
+	go func() {
+
+		fmt.Println("Waiting for cloudflared tunnel login to finish...")
+		err := cmd.Wait()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println("Tunnel auth setup finished without errors.")
+		status := "{\"status\": \"starting\", \"login_link\": \"" + url + "\"}"
+		utils.WriteOption("TUNNEL_STATUS", status)
+	
+		cmd = exec.Command("cloudflared", "tunnel", "delete", "edgebox")
+		cmd.Start()
+		err = cmd.Wait()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cmd = exec.Command("cloudflared", "tunnel", "create", "edgebox")
+		cmd.Start()
+
+		err = cmd.Wait()
+
+		dir := "/home/system/.cloudflared/"
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			panic(err)
+		}
+
+		var jsonFile os.DirEntry
+		for _, file := range files {
+			// check if file has json extension
+			if filepath.Ext(file.Name()) == ".json" {
+				jsonFile = file
+			}
+		}
+
+		if jsonFile == nil {
+			panic("No JSON file found in directory")
+		}
+
+		jsonFilePath := filepath.Join(dir, jsonFile.Name())
+
+		jsonBytes, err := ioutil.ReadFile(jsonFilePath)
+		if err != nil {
+			panic(err)
+		}
+
+		var data interface{}
+		err = json.Unmarshal(jsonBytes, &data)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(data)
+
+		// print propertie tunnel_id from json file
+		fmt.Println(data.(map[string]interface{})["tunnelID"])
+
+		// create the config.yml file with the following content in each line:
+		// "url": "http://localhost:80"
+		// "tunnel": "<TunnelID>"
+		// "credentials-file": "/root/.cloudflared/<tunnelID>.json"
+
+		file := "/home/system/.cloudflared/config.yml"
+		f, err := os.Create(file)
+		if err != nil {
+			panic(err)
+		}
+
+		defer f.Close()
+
+		_, err = f.WriteString("url: http://localhost:80\ntunnel: " + data.(map[string]interface{})["tunnelID"].(string) + "\ncredentials-file: " + jsonFilePath)
+
+		if err != nil {
+			panic(err)
+		}
+
+		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f" ,"edgebox", "*.myedge.app")
+		cmd.Start()
+		err = cmd.Wait()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f" ,"edgebox", "myedge.app")
+		cmd.Start()
+		err = cmd.Wait()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cmd = exec.Command("cloudflared", "service", "install")
+		cmd.Start()
+		cmd.Wait()
+
+		cmd = exec.Command("systemctl", "start", "cloudflared")
+		cmd.Start()
+		err = cmd.Wait()
+
+		if err != nil {
+			fmt.Println("Tunnel auth setup finished with errors.")
+			status := "{\"status\": \"error\", \"login_link\": \"" + url + "\"}"
+			utils.WriteOption("TUNNEL_STATUS", status)
+			log.Fatal(err)
+		} else {
+			fmt.Println("Tunnel auth setup finished without errors.")
+			status := "{\"status\": \"connected\", \"login_link\": \"" + url + "\"}"
+			utils.WriteOption("TUNNEL_STATUS", status)
+		}
+
+	}()
+
+	// Wait a couple seconds...
+	time.Sleep(10 * time.Second)
+	fmt.Println("Waited 10 secs for buffer... Attempting to read out file...")
+
+	// try to read the tunnel_out.txt file into a string
+	// if the file does not exist, keep trying each 5 seconds
+	// until the file exists
+	for {
+		_, err := os.Stat("/home/system/tunnel_out.txt")
+		if err == nil {
+			break
+		}
+		// print the error
+		fmt.Println(err)
+		time.Sleep(5 * time.Second)
+		fmt.Println("Did not find file, trying again...")
+	}
+
+	b, err := os.ReadFile("/home/system/tunnel_out.txt") // just pass the file name
+    if err != nil {
+        log.Fatal(err)
+    }
+
+	fmt.Println("File contents: \n" + string(b))
+
+	// Splitting the result into lines.
+	lines := strings.Split(string(b), "\n")
+
+	// Finding the line with the URL.
+	for _, line := range lines {
+		if strings.Contains(line, "https://") {
+			url = line
+			fmt.Println("Tunnel setup is requesting auth with URL: " + url)
+		}
+	}
+
+    // initialOutput := make([]byte, 0)
+
+    // The program can continue while the command runs in the background.
+    // ...
+
+    // Wait for the goroutine to finish before exiting the program
+	if err == nil {
+		status = "{\"status\": \"waiting\", \"login_link\": \"" + url + "\"}"
+	} else {
+		status = "{\"status\": \"error\", \"message\": \"" + err.Error() + "\"}"
+	}
+
+	
+	utils.WriteOption("TUNNEL_STATUS", status)
+	return "{\"url\": \"" + url + "\"}"
+
+	// Returning the URL (or error) in the status output.
+	return status
 }
 
 func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
