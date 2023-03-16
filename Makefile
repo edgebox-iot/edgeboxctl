@@ -1,7 +1,6 @@
 .PHONY: build
 
-PROJECT?=github.com/edgebox-iot/edgeboxctl
-
+PROJECT ?= github.com/edgebox-iot/edgeboxctl
 RELEASE ?= dev
 COMMIT := $(shell git rev-parse --short HEAD)
 BUILD_DATE := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
@@ -20,7 +19,7 @@ build-prod:
 build-cloud:
 	GOOS=linux GOARCH=amd64 RELEASE=cloud make build
 
-build
+build:
 	@echo "Building ${GOOS}-${GOARCH}"
 	GOOS=${GOOS} GOARCH=${GOARCH} go build \
 		-trimpath -ldflags "-s -w -X ${PROJECT}/internal/diagnostics.Version=${RELEASE} \
