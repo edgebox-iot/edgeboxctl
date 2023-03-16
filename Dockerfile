@@ -6,4 +6,4 @@ COPY ./ /app
 
 RUN go install github.com/githubnemo/CompileDaemon@latest
 
-ENTRYPOINT CompileDaemon --build="make build" --command=./bin/edgeboxctl
+ENTRYPOINT CompileDaemon --build="make build" --command=./bin/edgeboxctl-$(go env GOOS)-$(go env GOARCH)

@@ -36,7 +36,6 @@ build:
 		-X ${PROJECT}/internal/diagnostics.Commit=${COMMIT} \
 		-X ${PROJECT}/internal/diagnostics.BuildDate=${BUILD_DATE}" \
 		-o bin/edgeboxctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/edgeboxctl
-	cp ./bin/edgeboxctl-${GOOS}-${GOARCH} ./bin/edgeboxctl
 
 clean:
 	rm -rf ${BUILD_DIR}
