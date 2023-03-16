@@ -1,11 +1,9 @@
-FROM golang:latest
+FROM golang:1.20.2
 
 WORKDIR /app
 
 COPY ./ /app
 
-RUN go mod download
-
-RUN go get github.com/githubnemo/CompileDaemon
+RUN go install github.com/githubnemo/CompileDaemon@latest
 
 ENTRYPOINT CompileDaemon --build="make build" --command=./bin/edgeboxctl

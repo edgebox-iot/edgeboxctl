@@ -1,9 +1,14 @@
+.PHONY: build
+
 PROJECT?=github.com/edgebox-iot/edgeboxctl
 
 RELEASE ?= dev
 COMMIT := $(shell git rev-parse --short HEAD)
 BUILD_DATE := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 BUILD_DIR = bin
+GOOS := $(shell go env GOOS)
+GOARCH := $(shell go env GOARCH)
+
 
 build-all:
 	GOOS=linux GOARCH=amd64 make build
@@ -15,7 +20,7 @@ build-prod:
 build-cloud:
 	GOOS=linux GOARCH=amd64 RELEASE=cloud make build
 
-build:
+build
 	@echo "Building ${GOOS}-${GOARCH}"
 	GOOS=${GOOS} GOARCH=${GOARCH} go build \
 		-trimpath -ldflags "-s -w -X ${PROJECT}/internal/diagnostics.Version=${RELEASE} \

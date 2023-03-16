@@ -8,7 +8,7 @@
   <h3 align="center">Edgebox Control Module</h3>
 
   <p align="center">
-    A System Control module written in Go. Its resonsability is to configure dependencies and perform system tasks, automatically in a schedule, or by command.
+    A System Control module written in Go. Its responsibility is to configure dependencies and perform system tasks, automatically on a schedule, or on demand.
     <br />
     <br />
     <a href="https://github.com/github_username/edgeboxctl/issues">Report Bug</a>
@@ -38,8 +38,6 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Edgebox Screen Shot][product-screenshot]](https://edgebox.co)
-
 Edgebox is an easy to configure and use system. It brings powerful features that go alongside or can even completely replace various services that you already use in the day-to-day.
 
 
@@ -58,18 +56,15 @@ To get a local copy up and running follow these simple steps.
 
 ### Prerequisites
 
-If you're installing this to run natively in the system, you better be doing it inside of the [Development Virtual Machine](https://github.com/edgebox-iot/devm). This software can do destructive action in the system is is running. You've been warned.
+If you're running for development purposes, a docker container suffices, so make sure you have:
 
-If you're running for development purposes, a Docker container suffices, so make sure you have:
-* Docker
-* Docker Compose
-```sh
-sudo apt-get install docker docker-compose
-```
+* docker
+* docker compose
 
 Check the following links for more info on [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/).
 
-Aditionally, edgeboxctl needs the following bash commands available wherever it runs:
+Aditionally, `edgeboxctl` needs the following bash commands available wherever it runs:
+
 * `arm-linux-gnueabi-gcc` (`sudo apt-get install gcc-arm*`)
 * `sh`
 * `rm`
@@ -121,4 +116,4 @@ Contributions are what make the open source community such an amazing place to b
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the Elastic License 2.0. See `LICENSE` for more information.
