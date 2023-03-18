@@ -343,22 +343,10 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 	wsPath := utils.GetPath(utils.WsPath)	
 
 	// Stop a the service if it is running
-	fmt.Println("Stopping cloudflared service")
-	cmdargs := []string{"stop", "cloudflared"}
-	utils.Exec(wsPath, "systemctl", cmdargs)
+	system.StopService("cloudflared")
 
-	fmt.Println("Removing possibly previous service install.")
-	cmd := exec.Command("cloudflared", "service", "uninstall")
-	cmd.Start()
-	cmd.Wait()
-
-	fmt.Println("Removing cloudflared files")
-	cmdargs = []string{"-rf", "/home/system/.cloudflared"}
-	utils.Exec(wsPath, "rm", cmdargs)
-	cmdargs = []string{"-rf", "/etc/cloudflared/config.yml"}
-	utils.Exec(wsPath, "rm", cmdargs)
-	cmdargs = []string{"-rf", "/root/.cloudflared/cert.pem"}
-	utils.Exec(wsPath, "rm", cmdargs)
+	// Uninstall the service if it is installed
+	system.RemoveTunnelService()
 
 	fmt.Println("Creating cloudflared folder")
 	cmdargs = []string{"/home/system/.cloudflared"}
@@ -414,138 +402,11 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 		status := "{\"status\": \"starting\", \"login_link\": \"" + url + "\"}"
 		utils.WriteOption("TUNNEL_STATUS", status)
 
-		// fmt.Println("Moving certificate to global folder.")
-		// cmdargs = []string{"/home/system/.cloudflared/cert.pem", "/etc/cloudflared/cert.pem"}
-		// utils.Exec(wsPath, "cp", cmdargs)
+		// Remove old tunnel if it exists, and create from scratch
+		system.DeleteTunnel()
 
-		fmt.Println("Deleting possible previous tunnel.")
-		// Configure the service and start it
-		cmd := exec.Command("sh", "/home/system/components/edgeboxctl/scripts/cloudflared_tunnel_delete.sh")
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			panic(err)
-		}
-		scanner := bufio.NewScanner(stdout)
-		err = cmd.Start()
-		if err != nil {
-			panic(err)
-		}
-		for scanner.Scan() {
-			fmt.Println(scanner.Text())
-			text := scanner.Text()
-			fmt.Println(text)
-		}
-		if scanner.Err() != nil {
-			cmd.Process.Kill()
-			cmd.Wait()
-			panic(scanner.Err())
-		}
-		
-
-		fmt.Println("Creating Tunnel for Edgebox.")
-		cmd = exec.Command("sh", "/home/system/components/edgeboxctl/scripts/cloudflared_tunnel_create.sh")
-		stdout, err = cmd.StdoutPipe()
-		if err != nil {
-			panic(err)
-		}
-		scanner = bufio.NewScanner(stdout)
-		err = cmd.Start()
-		if err != nil {
-			panic(err)
-		}
-		for scanner.Scan() {
-			fmt.Println(scanner.Text())
-			text := scanner.Text()
-			fmt.Println(text)
-		}
-		if scanner.Err() != nil {
-			cmd.Process.Kill()
-			cmd.Wait()
-			panic(scanner.Err())
-		}
-
-		// This also needs to be executed in root and non root variants
-
-		fmt.Println("Reading cloudflared folder to get the JSON file.")
-		isRoot := false
-		dir := "/home/system/.cloudflared/"
-		dir2 := "/root/.cloudflared/"
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			panic(err)
-		}
-
-		var jsonFile os.DirEntry
-		for _, file := range files {
-			// check if file has json extension
-			if filepath.Ext(file.Name()) == ".json" {
-				fmt.Println("Non-Root JSON file found: " + file.Name())
-				jsonFile = file
-			}
-		}
-
-		// If the files are not in the home folder, try the root folder
-		if jsonFile == nil {
-			files, err = os.ReadDir(dir2)
-			if err != nil {
-				panic(err)
-			}
-			for _, file := range files {
-				// check if file has json extension
-				if filepath.Ext(file.Name()) == ".json" {
-					fmt.Println("Root JSON file found: " + file.Name())
-					jsonFile = file
-					isRoot = true
-				}
-			}
-		}
-
-		if jsonFile == nil {
-			panic("No JSON file found in directory")
-		}
-
-		fmt.Println("Reading JSON file.")
-		targetDir := "/home/system/.cloudflared/"
-		if isRoot {
-			targetDir = "/root/.cloudflared/"
-		}
-
-		jsonFilePath := filepath.Join(targetDir, jsonFile.Name())
-		jsonBytes, err := ioutil.ReadFile(jsonFilePath)
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Println("Parsing JSON file.")
-		var data cloudflaredTunnelJson
-		err = json.Unmarshal(jsonBytes, &data)
-		if err != nil {
-			log.Printf("Error reading tunnel JSON file: %s", err)
-		}
-
-		fmt.Println(data)
-
-		// print propertie tunnel_id from json file
-		fmt.Println("Tunnel ID is:" + data.TunnelID)
-
-		// create the config.yml file with the following content in each line:
-		// "url": "http://localhost:80"
-		// "tunnel": "<TunnelID>"
-		// "credentials-file": "/root/.cloudflared/<tunnelID>.json"
-
-		file := "/home/system/.cloudflared/config.yml"
-		f, err := os.Create(file)
-		if err != nil {
-			panic(err)
-		}
-
-		defer f.Close()
-
-		_, err = f.WriteString("url: http://localhost:80\ntunnel: " + data.TunnelID + "\ncredentials-file: " + jsonFilePath)
-
-		if err != nil {
-			panic(err)
-		}
+		// Create new tunnel (destination config file is param)
+		system.CreateTunnel("/home/system/.cloudflared/config.yml")
 
 		fmt.Println("Creating DNS Routes for @ and *.")
 		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f" ,"edgebox", "*." + args.DomainName)
@@ -555,9 +416,6 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 			log.Fatal(err)
 		}
 
-		domainNameInfo := args.DomainName
-		utils.WriteOption("DOMAIN_NAME", domainNameInfo)
-
 		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f" ,"edgebox", args.DomainName)
 		cmd.Start()
 		err = cmd.Wait()
@@ -565,32 +423,14 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 			log.Fatal(err)
 		}
 
-		fmt.Println("Installing systemd service.")
-		cmd = exec.Command("cloudflared", "--config", "/home/system/.cloudflared/config.yml", "service", "install")
-		cmd.Start()
-		cmd.Wait()
+		domainNameInfo := args.DomainName
+		utils.WriteOption("DOMAIN_NAME", domainNameInfo)
 
-		fmt.Println("Starting tunnel.")
-		cmd = exec.Command("systemctl", "start", "cloudflared")
-		stdout, err = cmd.StdoutPipe()
-		if err != nil {
-			panic(err)
-		}
-		scanner = bufio.NewScanner(stdout)
-		err = cmd.Start()
-		if err != nil {
-			panic(err)
-		}
-		for scanner.Scan() {
-			fmt.Println(scanner.Text())
-			text := scanner.Text()
-			fmt.Println(text)
-		}
-		if scanner.Err() != nil {
-			cmd.Process.Kill()
-			cmd.Wait()
-			panic(scanner.Err())
-		}
+		// Install service with given config file
+		system.InstallTunnelService("/home/system/.cloudflared/config.yml")
+
+		// Start the service
+		system.StartService("cloudflared")
 
 		if err != nil {
 			fmt.Println("Tunnel auth setup finished with errors.")
