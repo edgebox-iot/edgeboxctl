@@ -43,7 +43,8 @@ install-cloud: build-cloud
 	@echo "To start edgeboxctl run: systemctl start edgeboxctl"
 
 install-prod: build-prod
-	sudo systemctl stop edgeboxctl
+	-sudo systemctl stop edgeboxctl
+	sudo rm -rf /usr/local/bin/edgeboxctl /lib/systemd/system/edgeboxctl.service
 	sudo cp ./bin/edgeboxctl /usr/local/bin/edgeboxctl
 	sudo cp ./edgeboxctl.service /lib/systemd/system/edgeboxctl.service
 	sudo systemctl daemon-reload
