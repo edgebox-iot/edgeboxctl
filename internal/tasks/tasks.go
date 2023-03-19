@@ -7,12 +7,17 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"os/exec"
+	"strings"
+	"os"
+	"bufio"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
 	"github.com/edgebox-iot/edgeboxctl/internal/storage"
 	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
+
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 	_ "github.com/mattn/go-sqlite3"    // SQlite Driver
 )
@@ -29,10 +34,7 @@ type Task struct {
 }
 
 type taskSetupTunnelArgs struct {
-	BootnodeAddress string `json:"bootnode_address"`
-	BootnodeToken   string `json:"bootnode_token"`
-	AssignedAddress string `json:"assigned_address"`
-	NodeName        string `json:"node_name"`
+	DomainName string `json:"domain_name"`
 }
 
 type taskStartEdgeAppArgs struct {
@@ -63,6 +65,7 @@ type taskDisableOnlineArgs struct {
 type taskEnablePublicDashboardArgs struct {
 	InternetURL string `json:"internet_url"`
 }
+
 
 const STATUS_CREATED int = 0
 const STATUS_EXECUTING int = 1
@@ -134,15 +137,35 @@ func ExecuteTask(task Task) Task {
 		switch task.Task {
 		case "setup_tunnel":
 
-			log.Println("Setting up bootnode connection...")
+			log.Println("Setting up Cloudflare Tunnel...")
 			var args taskSetupTunnelArgs
 			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
-				log.Printf("Error reading arguments of setup_bootnode task: %s", err)
+				log.Printf("Error reading arguments of setup_tunnel task: %s", err)
+				status := "{\"status\": \"error\", \"message\": \"The Domain Name you are going to Authorize must be provided beforehand! Please insert a domain name and try again.\"}"
+				utils.WriteOption("TUNNEL_STATUS", status)
 			} else {
 				taskResult := taskSetupTunnel(args)
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
+
+		case "start_tunnel":
+
+			log.Println("Starting Cloudflare Tunnel...")
+			taskResult := taskStartTunnel()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
+		case "stop_tunnel":
+
+			log.Println("Stopping Cloudflare Tunnel...")
+			taskResult := taskStopTunnel()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		
+		case "disable_tunnel":
+
+			log.Println("Disabling Cloudflare Tunnel...")
+			taskResult := taskDisableTunnel()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
 
 		case "install_edgeapp":
 
@@ -328,19 +351,141 @@ func ExecuteSchedules(tick int) {
 
 func taskSetupTunnel(args taskSetupTunnelArgs) string {
 	fmt.Println("Executing taskSetupTunnel")
+	wsPath := utils.GetPath(utils.WsPath)	
 
-	wsPath := utils.GetPath(utils.WsPath)
-	cmdargs := []string{"gen", "--name", args.NodeName, "--token", args.BootnodeToken, args.BootnodeAddress + ":8655", "--prefix", args.AssignedAddress}
-	utils.Exec(wsPath, "tinc-boot", cmdargs)
+	// Stop a the service if it is running
+	system.StopService("cloudflared")
 
-	cmdargs = []string{"start", "tinc@dnet"}
-	utils.Exec(wsPath, "systemctl", cmdargs)
+	// Uninstall the service if it is installed
+	system.RemoveTunnelService()
 
-	cmdargs = []string{"enable", "tinc@dnet"}
-	utils.Exec(wsPath, "systemctl", cmdargs)
+	fmt.Println("Creating cloudflared folder")
+	cmdargs := []string{"/home/system/.cloudflared"}
+	utils.Exec(wsPath, "mkdir", cmdargs)
 
-	output := "OK" // Better check / logging of command execution result.
-	return output
+	cmd := exec.Command("sh", "/home/system/components/edgeboxctl/scripts/cloudflared_login.sh")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	scanner := bufio.NewScanner(stdout)
+	err = cmd.Start()
+	if err != nil {
+		panic(err)
+	}
+	url := ""
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+		text := scanner.Text()
+		if strings.Contains(text, "https://") {
+			url = text
+			fmt.Println("Tunnel setup is requesting auth with URL: " + url)
+			status := "{\"status\": \"waiting\", \"login_link\": \"" + url + "\"}"
+			utils.WriteOption("TUNNEL_STATUS", status)
+			break
+		}
+	}
+	if scanner.Err() != nil {
+		cmd.Process.Kill()
+		cmd.Wait()
+		panic(scanner.Err())
+	}
+
+	go func() {
+		fmt.Println("Running async")
+		cmd.Wait()
+
+		// Keep retrying to read cert.pem file until it is created
+		// When running as a service, the cert is saved to a different folder,
+		// so we check both :)
+		for {
+			_, err := os.Stat("/home/system/.cloudflared/cert.pem")
+			_, err2 := os.Stat("/root/.cloudflared/cert.pem")
+			if err == nil || err2 == nil {
+				fmt.Println("cert.pem file detected")
+				break
+			}
+			time.Sleep(1 * time.Second)
+			fmt.Println("Waiting for cert.pem file to be created")
+		}
+
+		fmt.Println("Tunnel auth setup finished without errors.")
+		status := "{\"status\": \"starting\", \"login_link\": \"" + url + "\"}"
+		utils.WriteOption("TUNNEL_STATUS", status)
+
+		// Remove old tunnel if it exists, and create from scratch
+		system.DeleteTunnel()
+
+		// Create new tunnel (destination config file is param)
+		system.CreateTunnel("/home/system/.cloudflared/config.yml")
+
+		fmt.Println("Creating DNS Routes for @ and *.")
+		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f" ,"edgebox", "*." + args.DomainName)
+		cmd.Start()
+		err = cmd.Wait()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f" ,"edgebox", args.DomainName)
+		cmd.Start()
+		err = cmd.Wait()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		domainNameInfo := args.DomainName
+		utils.WriteOption("DOMAIN_NAME", domainNameInfo)
+
+		// Install service with given config file
+		system.InstallTunnelService("/home/system/.cloudflared/config.yml")
+
+		// Start the service
+		system.StartService("cloudflared")
+
+		if err != nil {
+			fmt.Println("Tunnel auth setup finished with errors.")
+			status := "{\"status\": \"error\", \"login_link\": \"" + url + "\"}"
+			utils.WriteOption("TUNNEL_STATUS", status)
+			log.Fatal(err)
+		} else {
+			fmt.Println("Tunnel auth setup finished without errors.")
+			status := "{\"status\": \"connected\", \"login_link\": \"" + url + "\", \"domain\": \"" + args.DomainName + "\"}"
+			utils.WriteOption("TUNNEL_STATUS", status)
+		}
+
+		fmt.Println("Finished running async")
+	}()
+
+    return "{\"url\": \"" + url + "\"}"
+}
+
+func taskStartTunnel() string {
+	fmt.Println("Executing taskStartTunnel")
+	system.StartService("cloudflared")
+	domainName := utils.ReadOption("DOMAIN_NAME")
+	status := "{\"status\": \"connected\", \"domain\": \"" + domainName + "\"}"
+	utils.WriteOption("TUNNEL_STATUS", status)
+	return "{\"status\": \"ok\"}"
+}
+
+func taskStopTunnel() string {
+	fmt.Println("Executing taskStopTunnel")
+	system.StopService("cloudflared")
+	domainName := utils.ReadOption("DOMAIN_NAME")
+	status := "{\"status\": \"stopped\", \"domain\": \"" + domainName + "\"}"
+	utils.WriteOption("TUNNEL_STATUS", status)
+	return "{\"status\": \"ok\"}"
+}
+
+func taskDisableTunnel() string {
+	fmt.Println("Executing taskDisableTunnel")
+	system.StopService("cloudflared")
+	system.DeleteTunnel()
+	system.RemoveTunnelService()
+	utils.DeleteOption("DOMAIN_NAME")
+	utils.DeleteOption("TUNNEL_STATUS")
+	return "{\"status\": \"ok\"}"
 }
 
 func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
