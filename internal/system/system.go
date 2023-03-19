@@ -4,12 +4,25 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"log"
+	"os"
+	"os/exec"
+	"bufio"
+	"path/filepath"
+	"io/ioutil"
+	"encoding/json"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 
 	"github.com/joho/godotenv"
 	"github.com/shirou/gopsutil/host"
 )
+
+type cloudflaredTunnelJson struct {
+	AccountTag string `json:"AccountTag"`
+	TunnelSecret string `json:"TunnelSecret"`
+	TunnelID string `json:"TunnelID"`
+}
 
 // GetUptimeInSeconds: Returns a value (as string) of the total system uptime
 func GetUptimeInSeconds() string {
@@ -88,6 +101,7 @@ func SetupCloudOptions() {
 
 // StartService: Starts a service
 func StartService(serviceID string) {
+	wsPath := utils.GetPath(utils.WsPath)
 	fmt.Println("Starting" + serviceID + "service")
 	cmdargs := []string{"start", serviceID}
 	utils.Exec(wsPath, "systemctl", cmdargs)
@@ -95,6 +109,7 @@ func StartService(serviceID string) {
 
 // StopService: Stops a service
 func StopService(serviceID string) {
+	wsPath := utils.GetPath(utils.WsPath)
 	fmt.Println("Stopping" + serviceID + "service")
 	cmdargs := []string{"stop", "cloudflared"}
 	utils.Exec(wsPath, "systemctl", cmdargs)
@@ -118,12 +133,12 @@ func GetServiceStatus(serviceID string) string {
 // CreateTunnel: Creates a tunnel via cloudflared, needs to be authenticated first
 func CreateTunnel(configDestination string) {
 	fmt.Println("Creating Tunnel for Edgebox.")
-	cmd = exec.Command("sh", "/home/system/components/edgeboxctl/scripts/cloudflared_tunnel_create.sh")
-	stdout, err = cmd.StdoutPipe()
+	cmd := exec.Command("sh", "/home/system/components/edgeboxctl/scripts/cloudflared_tunnel_create.sh")
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		panic(err)
 	}
-	scanner = bufio.NewScanner(stdout)
+	scanner := bufio.NewScanner(stdout)
 	err = cmd.Start()
 	if err != nil {
 		panic(err)
@@ -249,7 +264,7 @@ func DeleteTunnel() {
 // InstallTunnelService: Installs the tunnel service
 func InstallTunnelService(config string) {
 	fmt.Println("Installing cloudflared service.")
-	cmd = exec.Command("cloudflared", "--config", config, "service", "install")
+	cmd := exec.Command("cloudflared", "--config", config, "service", "install")
 	cmd.Start()
 	cmd.Wait()
 }
@@ -263,7 +278,7 @@ func RemoveTunnelService() {
 	cmd.Wait()
 
 	fmt.Println("Removing cloudflared files")
-	cmdargs = []string{"-rf", "/home/system/.cloudflared"}
+	cmdargs := []string{"-rf", "/home/system/.cloudflared"}
 	utils.Exec(wsPath, "rm", cmdargs)
 	cmdargs = []string{"-rf", "/etc/cloudflared/config.yml"}
 	utils.Exec(wsPath, "rm", cmdargs)

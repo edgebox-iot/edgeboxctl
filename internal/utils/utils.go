@@ -192,3 +192,47 @@ func WriteOption(optionKey string, optionValue string) {
 
 	db.Close()
 }
+
+// ReadOption : Reads a key value pair option from the api shared database
+func ReadOption(optionKey string) string {
+	
+	db, err := sql.Open("sqlite3", GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	var optionValue string
+
+	err = db.QueryRow("SELECT value FROM option WHERE name = ?", optionKey).Scan(&optionValue)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+
+	return optionValue
+}
+
+// DeleteOption : Deletes a key value pair option from the api shared database
+func DeleteOption(optionKey string) {
+	
+	db, err := sql.Open("sqlite3", GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("DELETE FROM option WHERE name = ?;") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	_, err = statement.Exec(optionKey) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+}
