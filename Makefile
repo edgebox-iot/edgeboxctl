@@ -15,6 +15,15 @@ build-prod:
 build-cloud:
 	GOOS=linux GOARCH=amd64 RELEASE=cloud make build
 
+build-arm64:
+	GOOS=linux GOARCH=arm64 RELEASE=prod make build
+
+build-armhf:
+	GOOS=linux GOARCH=arm RELEASE=prod make build
+
+build-amd64:
+	GOOS=linux GOARCH=amd64 RELEASE=prod make build
+
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
 	GOOS=${GOOS} GOARCH=${GOARCH} go build \
