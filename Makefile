@@ -21,9 +21,6 @@ build-arm64:
 build-armhf:
 	GOOS=linux GOARCH=arm RELEASE=prod make build
 
-build-amd64:
-	GOOS=linux GOARCH=amd64 RELEASE=prod make build
-
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
 	GOOS=${GOOS} GOARCH=${GOARCH} go build \
@@ -52,7 +49,7 @@ install-cloud: build-cloud
 	@echo "To start edgeboxctl run: systemctl start edgeboxctl"
 
 install-prod: build-prod
-	-sudo systemctl stop edgeboxctl
+	sudo systemctl stop edgeboxctl
 	sudo rm -rf /usr/local/bin/edgeboxctl /lib/systemd/system/edgeboxctl.service
 	sudo cp ./bin/edgeboxctl /usr/local/bin/edgeboxctl
 	sudo cp ./edgeboxctl.service /lib/systemd/system/edgeboxctl.service

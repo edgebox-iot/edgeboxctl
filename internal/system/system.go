@@ -130,6 +130,22 @@ func GetServiceStatus(serviceID string) string {
 	return utils.Exec(wsPath, "systemctl", cmdargs)
 }
 
+func CreateBackupsPasswordFile(password string) {
+	// Create a password file for backups
+	backupPasswordFile := utils.GetPath(utils.BackupPasswordFileLocation)
+	backupPasswordFileDir := filepath.Dir(backupPasswordFile)
+
+	if _, err := os.Stat(backupPasswordFileDir); os.IsNotExist(err) {
+		os.MkdirAll(backupPasswordFileDir, 0755)
+	}
+
+	// Write the password to the file, overriting an existing file
+	err := ioutil.WriteFile(backupPasswordFile, []byte(password), 0644)
+	if err != nil {
+		panic(err)
+	}
+} 
+
 // CreateTunnel: Creates a tunnel via cloudflared, needs to be authenticated first
 func CreateTunnel(configDestination string) {
 	fmt.Println("Creating Tunnel for Edgebox.")

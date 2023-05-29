@@ -66,6 +66,14 @@ type taskEnablePublicDashboardArgs struct {
 	InternetURL string `json:"internet_url"`
 }
 
+type taskSetupBackupsArgs struct {
+	Service string `json:"service"`
+	AccessKeyID string `json:"access_key_id"`
+	SecretAccessKey string `json:"secret_access_key"`
+	RepositoryName string `json:"repository_name"`
+	RepositoryPassword string `json:"repository_password"`
+}
+
 
 const STATUS_CREATED int = 0
 const STATUS_EXECUTING int = 1
@@ -124,6 +132,7 @@ func ExecuteTask(task Task) Task {
 
 	formatedDatetime := utils.GetSQLiteFormattedDateTime(time.Now())
 
+	fmt.Println("Changing task status to executing: " + task.Task)
 	_, err = statement.Exec(STATUS_EXECUTING, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement
 	if err != nil {
 		log.Fatal(err.Error())
@@ -135,6 +144,34 @@ func ExecuteTask(task Task) Task {
 		log.Println("Task: " + task.Task)
 		log.Println("Args: " + task.Args.String)
 		switch task.Task {
+		case "setup_backups":
+
+			log.Println("Setting up Backups Destination...")
+			var args taskSetupBackupsArgs
+			err := json.Unmarshal([]byte(task.Args.String), &args)
+			if err != nil {
+				log.Println("Error reading arguments of setup_backups task: %s", err)
+			} else {
+				taskResult := taskSetupBackups(args)
+				taskResultBool := true
+				// Check if returned taskResult string contains "error"
+				if strings.Contains(taskResult, "error") {
+					taskResultBool = false
+				}
+				task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
+			}
+
+		case "start_backup":
+
+			log.Println("Backing up Edgebox...")
+			taskResult := taskBackup()
+			taskResultBool := true
+			// Check if returned taskResult string contains "error"
+			if strings.Contains(taskResult, "error") {
+				taskResultBool = false
+			}
+			task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
+
 		case "setup_tunnel":
 
 			log.Println("Setting up Cloudflare Tunnel...")
@@ -272,11 +309,13 @@ func ExecuteTask(task Task) Task {
 	formatedDatetime = utils.GetSQLiteFormattedDateTime(time.Now())
 
 	if task.Result.Valid {
+		fmt.Println("Task Result: " + task.Result.String)
 		_, err = statement.Exec(STATUS_FINISHED, task.Result.String, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with result info
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 	} else {
+		fmt.Println("Error executing task with result: " + task.Result.String)
 		_, err = statement.Exec(STATUS_ERROR, "Error", formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
 		if err != nil {
 			log.Fatal(err.Error())
@@ -338,6 +377,8 @@ func ExecuteSchedules(tick int) {
 	if tick%30 == 0 {
 		// Executing every 30 ticks
 		log.Println(taskGetEdgeApps())
+		// RESET SOME VARIABLES HERE IF NEEDED, SINCE SYSTEM IS UNBLOCKED
+		utils.WriteOption("BACKUP_IS_WORKING", "0")
 	}
 
 	if tick%60 == 0 {
@@ -345,8 +386,221 @@ func ExecuteSchedules(tick int) {
 		log.Println("System IP is: " + ip)
 	}
 
+	if tick%3600 == 0 {
+		// Executing every 3600 ticks (1 hour)
+		backup := taskAutoBackup()
+		log.Println("Auto Backup: " + backup)
+	}
+
 	// Just add a schedule here if you need a custom one (every "tick hour", every "tick day", etc...)
 
+}
+
+func taskSetupBackups(args taskSetupBackupsArgs) string {
+	fmt.Println("Executing taskSetupBackups" + args.Service)
+	// ...
+	service_url := ""
+	key_id_name := "AWS_ACCESS_KEY_ID"
+	key_secret_name := "AWS_SECRET_ACCESS_KEY"
+	repo_location := "/home/system/components/apps/"
+	service_found := false
+
+	switch args.Service {
+		case "s3":
+			service_url = "s3.amazonaws.com/"
+			service_found = true
+		case "b2":
+			service_url = ""
+			key_id_name = "B2_ACCOUNT_ID"
+			key_secret_name = "B2_ACCOUNT_KEY"
+			service_found = true
+		case "wasabi":
+			service_found = true
+			service_url = "s3.wasabisys.com/"
+	}
+
+	if !service_found {
+		fmt.Println("Service not found")
+		return "{\"status\": \"error\", \"message\": \"Service not found\"}"
+	}
+
+	fmt.Println("Creating env vars for authentication with backup service")
+	os.Setenv(key_id_name, args.AccessKeyID)
+	os.Setenv(key_secret_name, args.SecretAccessKey)
+
+	fmt.Println("Creating restic password file")
+	
+	system.CreateBackupsPasswordFile(args.RepositoryPassword)
+
+	fmt.Println("Initializing restic repository")
+	utils.WriteOption("BACKUP_IS_WORKING", "1")
+
+	cmdArgs := []string{"-r", args.Service + ":" + service_url + args.RepositoryName + ":" + repo_location, "init", "--password-file", utils.GetPath(utils.BackupPasswordFileLocation), "--verbose=3"}
+	
+	result := utils.ExecAndStream(repo_location, "restic", cmdArgs)
+
+	utils.WriteOption("BACKUP_IS_WORKING", "0")
+
+	// See if result contains the substring "Fatal:"
+	if strings.Contains(result, "Fatal:") {
+		fmt.Println("Error initializing restic repository")
+
+		utils.WriteOption("BACKUP_STATUS", "error")
+		utils.WriteOption("BACKUP_ERROR_MESSAGE", result)
+
+		return "{\"status\": \"error\", \"message\": \"" + result + "\"}"
+	}
+
+	// Save options to database
+	utils.WriteOption("BACKUP_STATUS", "initiated")
+	utils.WriteOption("BACKUP_SERVICE", args.Service)
+	utils.WriteOption("BACKUP_SERVICE_URL", service_url)
+	utils.WriteOption("BACKUP_REPOSITORY_NAME", args.RepositoryName)
+	utils.WriteOption("BACKUP_REPOSITORY_PASSWORD", args.RepositoryPassword)
+	utils.WriteOption("BACKUP_REPOSITORY_ACCESS_KEY_ID", args.AccessKeyID)
+	utils.WriteOption("BACKUP_REPOSITORY_SECRET_ACCESS_KEY", args.SecretAccessKey)
+	utils.WriteOption("BACKUP_REPOSITORY_LOCATION", repo_location)
+
+	// Populate Stats right away
+	taskGetBackupStatus()
+	
+	return "{\"status\": \"ok\"}"
+	
+}
+
+func taskRemoveBackups() string {
+
+	fmt.Println("Executing taskRemoveBackups")
+
+	// ...	This deletes the restic repository
+	// cmdArgs := []string{"-r", "s3:https://s3.amazonaws.com/edgebox-backups:/home/system/components/apps/", "forget", "latest", "--password-file", utils.GetPath(utils.BackupPasswordFileLocation), "--verbose=3"}
+	
+	utils.WriteOption("BACKUP_STATUS", "")
+	utils.WriteOption("BACKUP_IS_WORKING", "0")
+
+	return "{\"status\": \"ok\"}"
+	
+}
+
+func taskBackup() string {
+	fmt.Println("Executing taskBackup")
+
+	// Load Backup Options
+	backup_service := utils.ReadOption("BACKUP_SERVICE")
+	backup_service_url := utils.ReadOption("BACKUP_SERVICE_URL")
+	backup_repository_name := utils.ReadOption("BACKUP_REPOSITORY_NAME")
+	// backup_repository_password := utils.ReadOption("BACKUP_REPOSITORY_PASSWORD")
+	backup_repository_access_key_id := utils.ReadOption("BACKUP_REPOSITORY_ACCESS_KEY_ID")
+	backup_repository_secret_access_key := utils.ReadOption("BACKUP_REPOSITORY_SECRET_ACCESS_KEY")
+	backup_repository_location := utils.ReadOption("BACKUP_REPOSITORY_LOCATION")
+
+	key_id_name := "AWS_ACCESS_KEY_ID"
+	key_secret_name := "AWS_SECRET_ACCESS_KEY"
+	service_found := false
+
+	switch backup_service {
+		case "s3":
+			service_found = true
+		case "b2":
+			key_id_name = "B2_ACCOUNT_ID"
+			key_secret_name = "B2_ACCOUNT_KEY"
+			service_found = true
+		case "wasabi":
+			service_found = true
+	}
+
+	if !service_found {
+		fmt.Println("Service not found")
+		return "{\"status\": \"error\", \"message\": \"Backup Service not found\"}"
+	}
+
+	fmt.Println("Creating env vars for authentication with backup service")
+	fmt.Println(key_id_name)
+	os.Setenv(key_id_name, backup_repository_access_key_id)
+	fmt.Println(key_secret_name)
+	os.Setenv(key_secret_name, backup_repository_secret_access_key)
+
+
+	utils.WriteOption("BACKUP_IS_WORKING", "1")
+
+	// ...	This backs up the restic repository
+	cmdArgs := []string{"-r", backup_service + ":" + backup_service_url + backup_repository_name + ":" + backup_repository_location, "backup", backup_repository_location, "--password-file", utils.GetPath(utils.BackupPasswordFileLocation), "--verbose=3"}
+	result := utils.ExecAndStream(backup_repository_location, "restic", cmdArgs)
+
+	utils.WriteOption("BACKUP_IS_WORKING", "0")
+	// Write as Unix timestamp
+	utils.WriteOption("BACKUP_LAST_RUN", strconv.FormatInt(time.Now().Unix(), 10))
+
+	// See if result contains the substring "Fatal:"
+	if strings.Contains(result, "Fatal:") {
+		fmt.Println("Error backing up")
+		utils.WriteOption("BACKUP_STATUS", "error")
+		utils.WriteOption("BACKUP_ERROR_MESSAGE", result)
+		return "{\"status\": \"error\", \"message\": \"" + result + "\"}"
+	}
+
+	utils.WriteOption("BACKUP_STATUS", "working")
+	taskGetBackupStatus()
+	return "{\"status\": \"ok\"}"
+	
+}
+
+func taskAutoBackup() string {
+	fmt.Println("Executing taskAutoBackup")
+
+	// Get Backup Status
+	backup_status := utils.ReadOption("BACKUP_STATUS")
+	// We only backup is the status is "working"
+	if backup_status == "working" {
+		return taskBackup()
+	} else {
+		fmt.Println("Backup status is not working... skipping")
+		return "{\"status\": \"skipped\"}"		
+	}
+}
+
+func taskGetBackupStatus() string {
+	fmt.Println("Executing taskGetBackupStatus")
+
+	// Load Backup Options
+	backup_service := utils.ReadOption("BACKUP_SERVICE")
+	backup_service_url := utils.ReadOption("BACKUP_SERVICE_URL")
+	backup_repository_name := utils.ReadOption("BACKUP_REPOSITORY_NAME")
+	// backup_repository_password := utils.ReadOption("BACKUP_REPOSITORY_PASSWORD")
+	backup_repository_access_key_id := utils.ReadOption("BACKUP_REPOSITORY_ACCESS_KEY_ID")
+	backup_repository_secret_access_key := utils.ReadOption("BACKUP_REPOSITORY_SECRET_ACCESS_KEY")
+	backup_repository_location := utils.ReadOption("BACKUP_REPOSITORY_LOCATION")
+
+	key_id_name := "AWS_ACCESS_KEY_ID"
+	key_secret_name := "AWS_SECRET_ACCESS_KEY"
+	service_found := false
+
+	switch backup_service {
+		case "s3":
+			service_found = true
+		case "b2":
+			key_id_name = "B2_ACCOUNT_ID"
+			key_secret_name = "B2_ACCOUNT_KEY"
+			service_found = true
+		case "wasabi":
+			service_found = true
+	}
+
+	if !service_found {
+		fmt.Println("Service not found")
+		return "{\"status\": \"error\", \"message\": \"Backup Service not found\"}"
+	}
+
+	fmt.Println("Creating env vars for authentication with backup service")
+	os.Setenv(key_id_name, backup_repository_access_key_id)
+	os.Setenv(key_secret_name, backup_repository_secret_access_key)
+
+	// ...	This gets the restic repository status
+	cmdArgs := []string{"-r", backup_service + ":" + backup_service_url + backup_repository_name + ":" + backup_repository_location, "stats", "--password-file", utils.GetPath(utils.BackupPasswordFileLocation), "--verbose=3"}
+	utils.WriteOption("BACKUP_STATS", utils.ExecAndStream(backup_repository_location, "restic", cmdArgs))
+
+	return "{\"status\": \"ok\"}"
+	
 }
 
 func taskSetupTunnel(args taskSetupTunnelArgs) string {
