@@ -394,7 +394,7 @@ func ExecuteSchedules(tick int) {
 					log.Println(taskAutoBackup())
 				} else {
 
-					log.Println("Last backup is " + string(secondsSinceLastBackup) + " seconds old (less than 1 hour ago), skipping auto backup...")
+					log.Println("Last backup is " + fmt.Sprint(secondsSinceLastBackup) + " seconds old (less than 1 hour ago), skipping auto backup...")
 		
 				}
 			}
