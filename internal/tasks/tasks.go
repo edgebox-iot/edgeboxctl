@@ -379,6 +379,29 @@ func ExecuteSchedules(tick int) {
 		log.Println(taskGetEdgeApps())
 		// RESET SOME VARIABLES HERE IF NEEDED, SINCE SYSTEM IS UNBLOCKED
 		utils.WriteOption("BACKUP_IS_WORKING", "0")
+
+		// Check is Last Backup time (in unix time) is older than 1 h
+		lastBackup := utils.ReadOption("BACKUP_LAST_RUN")
+		if lastBackup != "" {
+			lastBackupTime, err := strconv.ParseInt(lastBackup, 10, 64)
+			if err != nil {
+				log.Println("Error parsing last backup time: " + err.Error())
+			} else {
+				secondsSinceLastBackup := time.Now().Unix() - lastBackupTime
+				if secondsSinceLastBackup > 3600 {
+					// If last backup is older than 1 hour, set BACKUP_IS_WORKING to 0
+					log.Println("Last backup was older than 1 hour, performing auto backup...")
+					log.Println(taskAutoBackup())
+				} else {
+
+					log.Println("Last backup is " + string(secondsSinceLastBackup) + " seconds old (less than 1 hour ago), skipping auto backup...")
+		
+				}
+			}
+		} else {
+			log.Println("Last backup time not found, skipping performing auto backup...")
+		}
+
 	}
 
 	if tick%60 == 0 {
@@ -388,8 +411,6 @@ func ExecuteSchedules(tick int) {
 
 	if tick%3600 == 0 {
 		// Executing every 3600 ticks (1 hour)
-		backup := taskAutoBackup()
-		log.Println("Auto Backup: " + backup)
 	}
 
 	// Just add a schedule here if you need a custom one (every "tick hour", every "tick day", etc...)
