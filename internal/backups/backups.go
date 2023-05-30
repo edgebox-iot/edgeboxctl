@@ -18,7 +18,7 @@ type Repository struct {
 	Size       string           `json:"size"`
 	Snapshots  []Snapshot      	`json:"snapshots"`
 	Status     string     		`json:"status"`
-	UsageStat  UsageStat        `json:"usage_stat"`
+	// UsageStat  UsageStat        `json:"usage_stat"`
 }
 
 // Snapshot : Struct representing a single snapshot in the backup repository
