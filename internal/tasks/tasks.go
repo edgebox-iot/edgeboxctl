@@ -150,7 +150,7 @@ func ExecuteTask(task Task) Task {
 			var args taskSetupBackupsArgs
 			err := json.Unmarshal([]byte(task.Args.String), &args)
 			if err != nil {
-				log.Println("Error reading arguments of setup_backups task: " + err)
+				log.Println("Error reading arguments of setup_backups task.")
 			} else {
 				taskResult := taskSetupBackups(args)
 				taskResultBool := true
