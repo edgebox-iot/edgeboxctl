@@ -296,6 +296,36 @@ func StopEdgeApp(ID string) EdgeAppStatus {
 
 }
 
+// StopAllEdgeApps: Stops all EdgeApps and returns a count of how many were stopped
+func StopAllEdgeApps() int {
+	edgeApps := GetEdgeApps()
+	appCount := 0
+	for _, edgeApp := range edgeApps {
+		StopEdgeApp(edgeApp.ID)
+		appCount++
+	}
+
+	return appCount
+
+}
+
+// StartAllEdgeApps: Starts all EdgeApps and returns a count of how many were started
+func StartAllEdgeApps() int {	
+	edgeApps := GetEdgeApps()
+	appCount := 0
+	for _, edgeApp := range edgeApps {
+		RunEdgeApp(edgeApp.ID)
+		appCount++
+	}
+
+	return appCount
+
+}
+
+func RestartEdgeAppsService() {
+	buildFrameworkContainers()
+}
+
 // EnableOnline : Write environment file and rebuild the necessary containers. Rebuilds containers in project (in case of change only)
 func EnableOnline(ID string, InternetURL string) MaybeEdgeApp {
 

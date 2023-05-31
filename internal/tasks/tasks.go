@@ -172,6 +172,16 @@ func ExecuteTask(task Task) Task {
 			}
 			task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
 
+		case "restore_backup":
+			log.Println("Attempting to Restore Last Backup to Edgebox")
+			taskResult := taskRestoreBackup()
+			taskResultBool := true
+			// Check if returned taskResult string contains "error"
+			if strings.Contains(taskResult, "error") {
+				taskResultBool = false
+			}
+			task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
+
 		case "setup_tunnel":
 
 			log.Println("Setting up Cloudflare Tunnel...")
@@ -462,6 +472,15 @@ func taskSetupBackups(args taskSetupBackupsArgs) string {
 
 	utils.WriteOption("BACKUP_IS_WORKING", "0")
 
+	// Write backup settings to table
+	utils.WriteOption("BACKUP_SERVICE", args.Service)
+	utils.WriteOption("BACKUP_SERVICE_URL", service_url)
+	utils.WriteOption("BACKUP_REPOSITORY_NAME", args.RepositoryName)
+	utils.WriteOption("BACKUP_REPOSITORY_PASSWORD", args.RepositoryPassword)
+	utils.WriteOption("BACKUP_REPOSITORY_ACCESS_KEY_ID", args.AccessKeyID)
+	utils.WriteOption("BACKUP_REPOSITORY_SECRET_ACCESS_KEY", args.SecretAccessKey)
+	utils.WriteOption("BACKUP_REPOSITORY_LOCATION", repo_location)
+
 	// See if result contains the substring "Fatal:"
 	if strings.Contains(result, "Fatal:") {
 		fmt.Println("Error initializing restic repository")
@@ -474,13 +493,6 @@ func taskSetupBackups(args taskSetupBackupsArgs) string {
 
 	// Save options to database
 	utils.WriteOption("BACKUP_STATUS", "initiated")
-	utils.WriteOption("BACKUP_SERVICE", args.Service)
-	utils.WriteOption("BACKUP_SERVICE_URL", service_url)
-	utils.WriteOption("BACKUP_REPOSITORY_NAME", args.RepositoryName)
-	utils.WriteOption("BACKUP_REPOSITORY_PASSWORD", args.RepositoryPassword)
-	utils.WriteOption("BACKUP_REPOSITORY_ACCESS_KEY_ID", args.AccessKeyID)
-	utils.WriteOption("BACKUP_REPOSITORY_SECRET_ACCESS_KEY", args.SecretAccessKey)
-	utils.WriteOption("BACKUP_REPOSITORY_LOCATION", repo_location)
 
 	// Populate Stats right away
 	taskGetBackupStatus()
@@ -555,6 +567,91 @@ func taskBackup() string {
 	// See if result contains the substring "Fatal:"
 	if strings.Contains(result, "Fatal:") {
 		fmt.Println("Error backing up")
+		utils.WriteOption("BACKUP_STATUS", "error")
+		utils.WriteOption("BACKUP_ERROR_MESSAGE", result)
+		return "{\"status\": \"error\", \"message\": \"" + result + "\"}"
+	}
+
+	utils.WriteOption("BACKUP_STATUS", "working")
+	taskGetBackupStatus()
+	return "{\"status\": \"ok\"}"
+	
+}
+
+func taskRestoreBackup() string {
+	fmt.Println("Executing taskRestoreBackup")
+
+	// Load Backup Options
+	backup_service := utils.ReadOption("BACKUP_SERVICE")
+	backup_service_url := utils.ReadOption("BACKUP_SERVICE_URL")
+	backup_repository_name := utils.ReadOption("BACKUP_REPOSITORY_NAME")
+	// backup_repository_password := utils.ReadOption("BACKUP_REPOSITORY_PASSWORD")
+	backup_repository_access_key_id := utils.ReadOption("BACKUP_REPOSITORY_ACCESS_KEY_ID")
+	backup_repository_secret_access_key := utils.ReadOption("BACKUP_REPOSITORY_SECRET_ACCESS_KEY")
+	backup_repository_location := utils.ReadOption("BACKUP_REPOSITORY_LOCATION")
+
+	key_id_name := "AWS_ACCESS_KEY_ID"
+	key_secret_name := "AWS_SECRET_ACCESS_KEY"
+	service_found := false
+
+	switch backup_service {
+		case "s3":
+			service_found = true
+		case "b2":
+			key_id_name = "B2_ACCOUNT_ID"
+			key_secret_name = "B2_ACCOUNT_KEY"
+			service_found = true
+		case "wasabi":
+			service_found = true
+	}
+
+	if !service_found {
+		fmt.Println("Service not found")
+		return "{\"status\": \"error\", \"message\": \"Backup Service not found\"}"
+	}
+
+	fmt.Println("Creating env vars for authentication with backup service")
+	fmt.Println(key_id_name)
+	os.Setenv(key_id_name, backup_repository_access_key_id)
+	fmt.Println(key_secret_name)
+	os.Setenv(key_secret_name, backup_repository_secret_access_key)
+
+
+	utils.WriteOption("BACKUP_IS_WORKING", "1")
+
+	fmt.Println("Stopping All EdgeApps")
+	// Stop All EdgeApps
+	edgeapps.StopAllEdgeApps()
+
+	// Copy all files in /home/system/components/apps/ to a backup folder
+	fmt.Println("Copying all files in /home/system/components/apps/ to a backup folder")
+	os.MkdirAll(utils.GetPath(utils.EdgeAppsBackupPath + "temp/"), 0777)
+	utils.CopyDir(utils.GetPath(utils.EdgeAppsPath), utils.GetPath(utils.EdgeAppsBackupPath + "temp/"))
+
+	fmt.Println("Removing all files in /home/system/components/apps/")
+	os.RemoveAll(utils.GetPath(utils.EdgeAppsPath))
+
+	// Create directory /home/system/components/apps/
+	fmt.Println("Creating directory /home/system/components/apps/")
+	os.MkdirAll(utils.GetPath(utils.EdgeAppsPath), 0777)
+
+	// ...	This restores up the restic repository
+	cmdArgs := []string{"-r", backup_service + ":" + backup_service_url + backup_repository_name + ":" + backup_repository_location, "restore", "latest", "--target", "/", "--path", backup_repository_location, "--password-file", utils.GetPath(utils.BackupPasswordFileLocation), "--verbose=3"}
+	result := utils.ExecAndStream(backup_repository_location, "restic", cmdArgs)
+
+	taskGetBackupStatus()
+
+	edgeapps.RestartEdgeAppsService()
+
+	utils.WriteOption("BACKUP_IS_WORKING", "0")
+
+	// See if result contains the substring "Fatal:"
+	if strings.Contains(result, "Fatal:") {
+		// Copy all files from backup folder to /home/system/components/apps/
+		os.MkdirAll(utils.GetPath(utils.EdgeAppsPath), 0777)
+		utils.CopyDir(utils.GetPath(utils.EdgeAppsBackupPath + "temp/"), utils.GetPath(utils.EdgeAppsPath))
+
+		fmt.Println("Error restoring backup: ")
 		utils.WriteOption("BACKUP_STATUS", "error")
 		utils.WriteOption("BACKUP_ERROR_MESSAGE", result)
 		return "{\"status\": \"error\", \"message\": \"" + result + "\"}"
