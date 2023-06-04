@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 )
 
@@ -97,7 +98,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 				Status:             GetEdgeAppStatus(ID),
 				Services:           GetEdgeAppServices(ID),
 				InternetAccessible: edgeAppInternetAccessible,
-				NetworkURL:         ID + ".edgebox.local",
+				NetworkURL:         ID + system.GetHostname() + ".local",
 				InternetURL:        edgeAppInternetURL,
 			},
 			Valid: true,
