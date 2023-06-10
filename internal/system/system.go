@@ -6,6 +6,7 @@ import (
 	"strings"
 	"log"
 	"os"
+	"io"
 	"os/exec"
 	"bufio"
 	"path/filepath"
@@ -300,5 +301,80 @@ func RemoveTunnelService() {
 	utils.Exec(wsPath, "rm", cmdargs)
 	cmdargs = []string{"-rf", "/root/.cloudflared/cert.pem"}
 	utils.Exec(wsPath, "rm", cmdargs)
+}
+
+func CopyDir(src string, dest string) error {
+    srcInfo, err := os.Stat(src)
+    if err != nil {
+        return err
+    }
+    if !srcInfo.IsDir() {
+        return fmt.Errorf("%s is not a directory", src)
+    }
+
+    err = os.MkdirAll(dest, srcInfo.Mode())
+    if err != nil {
+        return err
+    }
+
+    items, err := ioutil.ReadDir(src)
+    if err != nil {
+        return err
+    }
+
+    for _, item := range items {
+        srcPath := filepath.Join(src, item.Name())
+        destPath := filepath.Join(dest, item.Name())
+
+        if item.IsDir() {
+            err = CopyDir(srcPath, destPath)
+            if err != nil {
+                fmt.Printf("error copying directory %s to %s: %s\n", srcPath, destPath, err.Error())
+            }
+        } else {
+            err = CopyFile(srcPath, destPath)
+            if err != nil {
+                fmt.Printf("error copying file %s to %s: %s\n", srcPath, destPath, err.Error())
+            }
+        }
+    }
+
+    return nil
+}
+
+func CopyFile(src string, dest string) error {
+    srcFile, err := os.Open(src)
+    if err != nil {
+        return err
+    }
+    defer srcFile.Close()
+
+    destFile, err := os.Create(dest)
+    if err != nil {
+        return err
+    }
+    defer destFile.Close()
+
+    _, err = io.Copy(destFile, srcFile)
+    if err != nil {
+        return err
+    }
+
+    err = destFile.Sync()
+    if err != nil {
+        return err
+    }
+
+    srcInfo, err := os.Stat(src)
+    if err != nil {
+        return err
+    }
+
+    err = os.Chmod(dest, srcInfo.Mode())
+    if err != nil {
+        return err
+    }
+
+    return nil
 }
 

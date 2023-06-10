@@ -626,7 +626,7 @@ func taskRestoreBackup() string {
 	// Copy all files in /home/system/components/apps/ to a backup folder
 	fmt.Println("Copying all files in /home/system/components/apps/ to a backup folder")
 	os.MkdirAll(utils.GetPath(utils.EdgeAppsBackupPath + "temp/"), 0777)
-	utils.CopyDir(utils.GetPath(utils.EdgeAppsPath), utils.GetPath(utils.EdgeAppsBackupPath + "temp/"))
+	system.CopyDir(utils.GetPath(utils.EdgeAppsPath), utils.GetPath(utils.EdgeAppsBackupPath + "temp/"))
 
 	fmt.Println("Removing all files in /home/system/components/apps/")
 	os.RemoveAll(utils.GetPath(utils.EdgeAppsPath))
@@ -649,7 +649,7 @@ func taskRestoreBackup() string {
 	if strings.Contains(result, "Fatal:") {
 		// Copy all files from backup folder to /home/system/components/apps/
 		os.MkdirAll(utils.GetPath(utils.EdgeAppsPath), 0777)
-		utils.CopyDir(utils.GetPath(utils.EdgeAppsBackupPath + "temp/"), utils.GetPath(utils.EdgeAppsPath))
+		system.CopyDir(utils.GetPath(utils.EdgeAppsBackupPath + "temp/"), utils.GetPath(utils.EdgeAppsPath))
 
 		fmt.Println("Error restoring backup: ")
 		utils.WriteOption("BACKUP_STATUS", "error")

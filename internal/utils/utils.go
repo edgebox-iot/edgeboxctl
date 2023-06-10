@@ -109,6 +109,7 @@ const CloudEnvFileLocation string = "cloudEnvFileLocation"
 const ApiEnvFileLocation string = "apiEnvFileLocation"
 const ApiPath string = "apiPath"
 const EdgeAppsPath string = "edgeAppsPath"
+const EdgeAppsBackupPath string = "edgeAppsBackupPath"
 const WsPath string = "wsPath"
 
 // GetPath : Returns either the hardcoded path, or a overwritten value via .env file at project root. Register paths here for seamless working code between dev and prod environments ;)
@@ -154,6 +155,13 @@ func GetPath(pathKey string) string {
 			targetPath = env["EDGEAPPS_PATH"]
 		} else {
 			targetPath = "/home/system/components/apps/"
+		}
+
+	case EdgeAppsBackupPath:
+		if env["EDGEAPPS_BACKUP_PATH"] != "" {
+			targetPath = env["EDGEAPPS_BACKUP_PATH"]
+		} else {
+			targetPath = "/home/system/components/backups/"
 		}
 
 	case WsPath:
