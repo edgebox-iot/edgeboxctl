@@ -98,7 +98,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 				Status:             GetEdgeAppStatus(ID),
 				Services:           GetEdgeAppServices(ID),
 				InternetAccessible: edgeAppInternetAccessible,
-				NetworkURL:         ID + system.GetHostname() + ".local",
+				NetworkURL:         ID + "." + system.GetHostname() + ".local",
 				InternetURL:        edgeAppInternetURL,
 			},
 			Valid: true,

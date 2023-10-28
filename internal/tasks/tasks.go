@@ -374,6 +374,7 @@ func ExecuteSchedules(tick int) {
 		log.Println("Uptime is " + uptime + " seconds (" + system.GetUptimeFormatted() + ")")
 
 		log.Println(taskGetStorageDevices())
+		taskStartWs()
 		log.Println(taskGetEdgeApps())
 
 	}
@@ -421,6 +422,12 @@ func ExecuteSchedules(tick int) {
 
 	if tick%3600 == 0 {
 		// Executing every 3600 ticks (1 hour)
+	}
+
+	if tick%86400 == 0 {
+		// Executing every 86400 ticks (+/1 day)
+		// Ensuring we run a normal build, setting up avahi domain names fresh in the network
+		taskStartWs()
 	}
 
 	// Just add a schedule here if you need a custom one (every "tick hour", every "tick day", etc...)
@@ -999,4 +1006,9 @@ func taskGetHostname() string {
 func taskSetupCloudOptions() {
 	fmt.Println("Executing taskSetupCloudOptions")
 	system.SetupCloudOptions()
+}
+
+func taskStartWs() {
+	fmt.Println("Executing taskStartWs")
+	system.StartWs()
 }

@@ -100,6 +100,14 @@ func SetupCloudOptions() {
 	utils.Exec("/", "rm", []string{cloudEnvFileLocationPath})
 }
 
+// StartWs: Starts the webserver service for Edgeapps
+func StartWs() {
+	wsPath := utils.GetPath(utils.WsPath)
+	fmt.Println("Starting WS")
+	cmdargs := []string{"-b"}
+	utils.Exec(wsPath, "./ws", cmdargs)
+}
+
 // StartService: Starts a service
 func StartService(serviceID string) {
 	wsPath := utils.GetPath(utils.WsPath)
