@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
-
+	
 	"github.com/joho/godotenv"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/system"
@@ -23,6 +23,8 @@ type EdgeApp struct {
 	InternetAccessible bool             `json:"internet_accessible"`
 	NetworkURL         string           `json:"network_url"`
 	InternetURL        string           `json:"internet_url"`
+	Options			   []EdgeAppOption  `json:"options"`
+	NeedsConfig		   bool             `json:"needs_config"`
 }
 
 // MaybeEdgeApp : Boolean flag for validation of edgeapp existance
@@ -43,8 +45,20 @@ type EdgeAppService struct {
 	IsRunning bool   `json:"is_running"`
 }
 
+type EdgeAppOption struct {
+	Key             string `json:"key"`
+	Value           string `json:"value"`
+	DefaultValue    string `json:"default_value"`
+	Format          string `json:"format"`
+	Description     string `json:"description"`
+	IsSecret        bool   `json:"is_secret"`
+	IsInstallLocked bool   `json:"is_install_locked"`
+}
+
 const configFilename = "/edgebox-compose.yml"
 const envFilename = "/edgebox.env"
+const optionsTemplateFilename = "/edgeapp.template.env"
+const optionsEnvFilename = "/edgeapp.env"
 const runnableFilename = "/.run"
 const myEdgeAppServiceEnvFilename = "/myedgeapp.env"
 const defaultContainerOperationSleepTime time.Duration = time.Second * 10
@@ -63,6 +77,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 
 		edgeAppName := ID
 		edgeAppDescription := ""
+		edgeAppOptions := []EdgeAppOption{}
 
 		edgeAppEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + envFilename)
 
@@ -76,6 +91,103 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 				edgeAppDescription = edgeAppEnv["EDGEAPP_DESCRIPTION"]
 			}
 		}
+
+		needsConfig := false
+		hasFilledOptions := false
+		edgeAppOptionsTemplate, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + optionsTemplateFilename)
+		if err != nil {
+			log.Println("Error loading options template file for edgeapp " + edgeAppName)
+		} else {
+			// Try to read the edgeAppOptionsEnv file
+			edgeAppOptionsEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + optionsEnvFilename)
+			if err != nil {
+				log.Println("Error loading options env file for edgeapp " + edgeAppName)
+			} else {
+				hasFilledOptions = true
+			}
+
+			for key, value := range edgeAppOptionsTemplate {
+				
+				optionFilledValue := ""
+				if hasFilledOptions {
+					// Check if key exists in edgeAppOptionsEnv
+					optionFilledValue = edgeAppOptionsEnv[key]
+				}
+
+				format := ""
+				defaultValue := ""
+				description := ""
+				installLocked := false
+
+				// Parse value to separate by | and get the format, installLocked, description and default value
+				// Format is the first element
+				// InstallLocked is the second element
+				// Description is the third element
+				// Default value is the fourth element
+
+				valueSlices := strings.Split(value, "|")
+				if len(valueSlices) > 0 {
+					format = valueSlices[0]
+				}
+				if len(valueSlices) > 1 {
+					installLocked = valueSlices[1] == "true"
+				}
+				if len(valueSlices) > 2 {
+					description = valueSlices[2]
+				}
+				if len(valueSlices) > 3 {
+					defaultValue = valueSlices[3]
+				}
+
+				// // If value contains ">|", then get everything that is to the right of it as the description
+				// // and get everything between "<>" as the format
+				// if strings.Contains(value, ">|") {
+				// 	description = strings.Split(value, ">|")[1]
+				// 	// Check if description has default value. That would be everything that is to the right of the last "|"
+				// 	if strings.Contains(description, "|") {
+				// 		defaultValue = strings.Split(description, "|")[1]
+				// 		description = strings.Split(description, "|")[0]
+				// 	}
+
+				// 	value = strings.Split(value, ">|")[0]
+				// 	// Remove the initial < from value
+				// 	value = strings.TrimPrefix(value, "<")
+				// } else {
+				// 	// Trim initial < and final > from value
+				// 	value = strings.TrimPrefix(value, "<")
+				// 	value = strings.TrimSuffix(value, ">")
+				// }
+
+				isSecret := false
+
+				// Check if the lowercased key string contains the letters "pass", "secret", "key"
+				lowercaseKey := strings.ToLower(key)
+				// check if lowercaseInput contains "pass", "key", or "secret", or "token"
+				if strings.Contains(lowercaseKey, "pass") ||
+					strings.Contains(lowercaseKey, "key") ||
+					strings.Contains(lowercaseKey, "secret") ||
+					strings.Contains(lowercaseKey, "token") {
+					isSecret = true
+				}
+
+				currentOption := EdgeAppOption{
+					Key:             key,
+					Value:           optionFilledValue,
+					DefaultValue:    defaultValue,
+					Description:     description,
+					Format:          format,
+					IsSecret:        isSecret,
+					IsInstallLocked: installLocked,
+				}
+				edgeAppOptions = append(edgeAppOptions, currentOption)
+
+				if optionFilledValue == "" {
+					needsConfig = true
+				}
+
+			}
+		}
+
 
 		edgeAppInternetAccessible := false
 		edgeAppInternetURL := ""
@@ -100,6 +212,8 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 				InternetAccessible: edgeAppInternetAccessible,
 				NetworkURL:         ID + "." + system.GetHostname() + ".local",
 				InternetURL:        edgeAppInternetURL,
+				Options: 		    edgeAppOptions,
+				NeedsConfig:        needsConfig,
 			},
 			Valid: true,
 		}

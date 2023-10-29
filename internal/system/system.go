@@ -100,6 +100,29 @@ func SetupCloudOptions() {
 	utils.Exec("/", "rm", []string{cloudEnvFileLocationPath})
 }
 
+func StartSystemLogger() {
+	fmt.Println("Starting system logger")
+	loggerPath := utils.GetPath(utils.LoggerPath)
+	utils.Exec(loggerPath, "make", []string{"start"})
+}
+
+// UpdateSystemLoggerServices: Updates the services.txt file with the services that are currently running
+func UpdateSystemLoggerServices(services []string) {
+	fmt.Println("Updating system logger services:")
+	fmt.Println(services)
+	loggerPath := utils.GetPath(utils.LoggerPath)
+
+	utils.Exec(loggerPath, "bash", []string{"-c", "rm services.txt && touch services.txt"})
+
+	for _, service := range services {
+		fmt.Println("Adding " + service + " to services.txt")
+		utils.Exec(loggerPath, "bash", []string{"-c", "echo " + service + " >> services.txt"})
+	}
+
+	// Add empty line at the end of file (best practice)
+	utils.Exec(loggerPath, "bash", []string{"-c", "echo '' >> services.txt"})
+}
+
 // StartWs: Starts the webserver service for Edgeapps
 func StartWs() {
 	wsPath := utils.GetPath(utils.WsPath)

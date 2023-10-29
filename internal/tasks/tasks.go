@@ -33,6 +33,12 @@ type Task struct {
 	Updated string         `json:"updated"`
 }
 
+// TaskOption: Struct for Task Options (kv pair)
+type TaskOption struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type taskSetupTunnelArgs struct {
 	DomainName string `json:"domain_name"`
 }
@@ -51,6 +57,12 @@ type taskRemoveEdgeAppArgs struct {
 
 type taskStopEdgeAppArgs struct {
 	ID string `json:"id"`
+}
+
+type taskSetEdgeAppOptionsArgs struct {
+	ID string `json:"id"`
+	// Options should be an array of "key":"value" pairs
+	Options []TaskOption `json:"options"`
 }
 
 type taskEnableOnlineArgs struct {
@@ -262,6 +274,19 @@ func ExecuteTask(task Task) Task {
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
+		case "set_edgeapp_options":
+
+			log.Println("Setting EdgeApp Options...")
+			var args taskSetEdgeAppOptionsArgs
+			// {"id":"podgrab","options":{"PODGRAB_PASSWORD":"fumarmata"}}
+			err := json.Unmarshal([]byte(task.Args.String), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of set_edgeapp_options task: %s", err)
+			} else {
+				taskResult := taskSetEdgeAppOptions(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
 		case "enable_online":
 
 			log.Println("Enabling online access to EdgeApp...")
@@ -376,7 +401,7 @@ func ExecuteSchedules(tick int) {
 		log.Println(taskGetStorageDevices())
 		taskStartWs()
 		log.Println(taskGetEdgeApps())
-
+		taskUpdateSystemLoggerServices()
 	}
 
 	if tick%5 == 0 {
@@ -388,6 +413,7 @@ func ExecuteSchedules(tick int) {
 	if tick%30 == 0 {
 		// Executing every 30 ticks
 		log.Println(taskGetEdgeApps())
+		taskUpdateSystemLoggerServices()
 		// RESET SOME VARIABLES HERE IF NEEDED, SINCE SYSTEM IS UNBLOCKED
 		utils.WriteOption("BACKUP_IS_WORKING", "0")
 
@@ -909,6 +935,57 @@ func taskStopEdgeApp(args taskStopEdgeAppArgs) string {
 	return string(resultJSON)
 }
 
+func taskSetEdgeAppOptions(args taskSetEdgeAppOptionsArgs) string {
+	// Id is the edgeapp id
+	appID := args.ID
+
+
+	// Open the file to write the options,
+	// it is an env file in /home/system/components/apps/<app_id>/edgeapp.env
+
+	// Get the path to the edgeapp.env file
+	edgeappEnvPath := "/home/system/components/apps/" + appID + "/edgeapp.env"
+
+	// If the file does not exist, create it
+	if _, err := os.Stat(edgeappEnvPath); os.IsNotExist(err) {
+		// Create the file
+		_, err := os.Create(edgeappEnvPath)
+		if err != nil {
+			log.Printf("Error creating edgeapp.env file: %s", err)
+		}
+	}
+
+	// It is an env file, so we can use go-dotenv to write the options
+	// Open the file
+	edgeappEnvFile, err := os.OpenFile(edgeappEnvPath, os.O_WRONLY, 0600)
+	if err != nil {
+		log.Printf("Error opening edgeapp.env file: %s", err)
+	}
+
+	// Write the options to the file
+	for _, value := range args.Options {
+		// Write the option to the file
+		_, err := edgeappEnvFile.WriteString(value.Key + "=" + value.Value + "\n")
+		if err != nil {
+			log.Printf("Error writing option to edgeapp.env file: %s", err)
+		}
+	}
+	
+	// Close the file
+	err = edgeappEnvFile.Close()
+	if err != nil {
+		log.Printf("Error closing edgeapp.env file: %s", err)
+	}
+
+	result := edgeapps.GetEdgeAppStatus(appID)
+	resultJSON, _ := json.Marshal(result)
+
+	system.StartWs()
+	taskGetEdgeApps() // This task will imediatelly update the entry in the api database.
+
+	return string(resultJSON)
+}
+
 func taskEnableOnline(args taskEnableOnlineArgs) string {
 	fmt.Println("Executing taskEnableOnline for " + args.ID)
 
@@ -959,6 +1036,35 @@ func taskSetReleaseVersion() string {
 	utils.WriteOption("RELEASE_VERSION", diagnostics.Version)
 
 	return diagnostics.Version
+}
+
+func taskUpdateSystemLoggerServices() string {
+	fmt.Println("Executing taskUpdateSystemLoggerServices")
+	// The input is an array of strings
+	// Each string is a service name to be logged
+	var input []string
+
+	// Get the services
+	edgeAppsList := utils.ReadOption("EDGEAPPS_LIST")
+	var edgeApps []edgeapps.EdgeApp
+	err := json.Unmarshal([]byte(edgeAppsList), &edgeApps)
+	if err != nil {
+		log.Fatalf("failed to unmarshal EDGEAPPS_LIST: %v", err)
+	}
+
+	for _, edgeApp := range edgeApps {
+		for _, service := range edgeApp.Services {
+			input = append(input, service.ID)
+		}
+	}
+
+	input = append(input, "edgeboxctl")
+	input = append(input, "tunnel")
+	
+	// Run the system logger
+	system.UpdateSystemLoggerServices(input)
+
+	return "{\"status\": \"ok\"}"
 }
 
 func taskGetEdgeApps() string {
