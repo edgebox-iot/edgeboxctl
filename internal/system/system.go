@@ -104,6 +104,10 @@ func SetupCloudOptions() {
 		utils.WriteOption("CLUSTER_IP", cloudEnv["CLUSTER_IP"])
 	}
 
+	if cloudEnv["CLUSTER_SSH_PORT"] != "" {
+		utils.WriteOption("CLUSTER_SSH_PORT", cloudEnv["CLUSTER_SSH_PORT"])
+	}
+
 	if cloudEnv["EDGEBOXIO_API_TOKEN"] != "" {
 		utils.WriteOption("EDGEBOXIO_API_TOKEN", cloudEnv["EDGEBOXIO_API_TOKEN"])
 	}
