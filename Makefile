@@ -21,6 +21,10 @@ build-arm64:
 build-armhf:
 	GOOS=linux GOARCH=arm RELEASE=prod make build
 
+build-amd64:
+	GOOS=linux GOARCH=amd64 RELEASE=prod make build
+
+
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
 	GOOS=${GOOS} GOARCH=${GOARCH} go build \
@@ -54,6 +58,7 @@ install-prod: build-prod install
 install-cloud: build-cloud install
 install-arm64: build-arm64 install
 install-armhf: build-armhf install
+install-amd64: build-amd64 install
 
 start:
 	systemctl start edgeboxctl
