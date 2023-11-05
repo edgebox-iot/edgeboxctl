@@ -45,7 +45,7 @@ test-with-coverage:
 	go test -tags=unit -timeout=600s -v ./... -coverprofile=coverage.out
 
 install:
-	sudo systemctl stop edgeboxctl
+	sudo systemctl stop edgeboxctl || true
 	sudo rm -rf /usr/local/bin/edgeboxctl /usr/local/sbin/edgeboctl /lib/systemd/system/edgeboxctl.service
 	sudo cp ./bin/edgeboxctl /usr/local/bin/edgeboxctl
 	sudo cp ./bin/edgeboxctl /usr/local/sbin/edgeboxctl
