@@ -39,6 +39,11 @@ type TaskOption struct {
 	Value string `json:"value"`
 }
 
+type TaskBasicAuth struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type taskSetupTunnelArgs struct {
 	DomainName string `json:"domain_name"`
 }
@@ -63,6 +68,15 @@ type taskSetEdgeAppOptionsArgs struct {
 	ID string `json:"id"`
 	// Options should be an array of "key":"value" pairs
 	Options []TaskOption `json:"options"`
+}
+
+type taskSetEdgeAppBasicAuthArgs struct {
+	ID string `json:"id"`
+	Login TaskBasicAuth `json:"login"`
+}
+
+type taskRemoveEdgeAppBasicAuthArgs struct {
+	ID string `json:"id"`
 }
 
 type taskEnableOnlineArgs struct {
@@ -284,6 +298,30 @@ func ExecuteTask(task Task) Task {
 				log.Printf("Error reading arguments of set_edgeapp_options task: %s", err)
 			} else {
 				taskResult := taskSetEdgeAppOptions(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "set_edgeapp_basic_auth":
+
+			log.Println("Settig EdgeApp Basic Authentication...")
+			var args taskSetEdgeAppBasicAuthArgs
+			err := json.Unmarshal([]byte(task.Args.String), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of set_edgeapp_basic_auth task: %s", err)
+			} else {
+				taskResult := taskSetEdgeAppBasicAuth(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "remove_edgeapp_basic_auth":
+
+			log.Println("Removing EdgeApp Basic Authentication...")
+			var args taskRemoveEdgeAppBasicAuthArgs
+			err := json.Unmarshal([]byte(task.Args.String), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of remove_edgeapp_basic_auth task: %s", err)
+			} else {
+				taskResult := taskRemoveEdgeAppBasicAuth(args)
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
@@ -975,6 +1013,77 @@ func taskSetEdgeAppOptions(args taskSetEdgeAppOptionsArgs) string {
 	err = edgeappEnvFile.Close()
 	if err != nil {
 		log.Printf("Error closing edgeapp.env file: %s", err)
+	}
+
+	result := edgeapps.GetEdgeAppStatus(appID)
+	resultJSON, _ := json.Marshal(result)
+
+	system.StartWs()
+	taskGetEdgeApps() // This task will imediatelly update the entry in the api database.
+
+	return string(resultJSON)
+}
+
+func taskSetEdgeAppBasicAuth(args taskSetEdgeAppBasicAuthArgs) string {
+	// Id is the edgeapp id
+	appID := args.ID
+
+
+	// Open the file to write the options,
+	// it is an env file in /home/system/components/apps/<app_id>/auth.env
+
+	// Get the path to the auth.env file
+	edgeappAuthEnvPath := "/home/system/components/apps/" + appID + "/auth.env"
+
+	// If the file does not exist, create it
+	if _, err := os.Stat(edgeappAuthEnvPath); os.IsNotExist(err) {
+		// Create the file
+		_, err := os.Create(edgeappAuthEnvPath)
+		if err != nil {
+			log.Printf("Error creating auth.env file: %s", err)
+		}
+	}
+
+	// It is an env file, so we can use go-dotenv to write the options
+	// Open the file
+	edgeappAuthEnvFile, err := os.OpenFile(edgeappAuthEnvPath, os.O_WRONLY, 0600)
+	if err != nil {
+		log.Printf("Error opening auth.env file: %s", err)
+	}
+
+	// Write the login values to the file
+	_, err = edgeappAuthEnvFile.WriteString("USERNAME=" + args.Login.Username + "\n" + "PASSWORD=" + args.Login.Password + "\n")
+	if err != nil {
+		log.Printf("Error writing credentials to auth.env file: %s", err)
+	}
+	
+	// Close the file
+	err = edgeappAuthEnvFile.Close()
+	if err != nil {
+		log.Printf("Error closing auth.env file: %s", err)
+	}
+
+	result := edgeapps.GetEdgeAppStatus(appID)
+	resultJSON, _ := json.Marshal(result)
+
+	system.StartWs()
+	taskGetEdgeApps() // This task will imediatelly update the entry in the api database.
+
+	return string(resultJSON)
+}
+
+func taskRemoveEdgeAppBasicAuth(args taskRemoveEdgeAppBasicAuthArgs) string {
+	// Id is the edgeapp id
+	appID := args.ID
+
+	// Get the path to the auth.env file
+	edgeappAuthEnvFile := "/auth.env"
+
+	fmt.Println("Removing auth.env file" + edgeappAuthEnvFile)
+
+	err := os.Remove(utils.GetPath(utils.EdgeAppsPath) + args.ID + edgeappAuthEnvFile)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	result := edgeapps.GetEdgeAppStatus(appID)

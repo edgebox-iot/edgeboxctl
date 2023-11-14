@@ -25,6 +25,7 @@ type EdgeApp struct {
 	InternetURL        string           `json:"internet_url"`
 	Options			   []EdgeAppOption  `json:"options"`
 	NeedsConfig		   bool             `json:"needs_config"`
+	Login              EdgeAppLogin	 	`json:"login"`
 }
 
 // MaybeEdgeApp : Boolean flag for validation of edgeapp existance
@@ -55,11 +56,19 @@ type EdgeAppOption struct {
 	IsInstallLocked bool   `json:"is_install_locked"`
 }
 
+type EdgeAppLogin struct {
+	Enabled  bool   `json:"enabled"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 const configFilename = "/edgebox-compose.yml"
 const envFilename = "/edgebox.env"
 const optionsTemplateFilename = "/edgeapp.template.env"
 const optionsEnvFilename = "/edgeapp.env"
+const authEnvFilename = "/auth.env"
 const runnableFilename = "/.run"
+const appdataFoldername = "/appdata"
 const myEdgeAppServiceEnvFilename = "/myedgeapp.env"
 const defaultContainerOperationSleepTime time.Duration = time.Second * 10
 
@@ -202,6 +211,21 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 			}
 		}
 
+		edgeAppBasicAuthEnabled := false
+		edgeAppBasicAuthUsername := ""
+		edgeAppBasicAuthPassword := ""
+
+		edgeAppAuthEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + authEnvFilename)
+		if err != nil {
+			log.Println("No auth.env file found. Login status is disabled.")
+		} else {
+			if edgeAppAuthEnv["USERNAME"] != "" && edgeAppAuthEnv["PASSWORD"] != "" {
+				edgeAppBasicAuthEnabled = true
+				edgeAppBasicAuthUsername = edgeAppAuthEnv["USERNAME"]
+				edgeAppBasicAuthPassword = edgeAppAuthEnv["PASSWORD"]
+			}
+		}
+
 		result = MaybeEdgeApp{
 			EdgeApp: EdgeApp{
 				ID:                 ID,
@@ -214,6 +238,8 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 				InternetURL:        edgeAppInternetURL,
 				Options: 		    edgeAppOptions,
 				NeedsConfig:        needsConfig,
+				Login:				EdgeAppLogin{edgeAppBasicAuthEnabled, edgeAppBasicAuthUsername, edgeAppBasicAuthPassword},
+				
 			},
 			Valid: true,
 		}
@@ -268,11 +294,40 @@ func SetEdgeAppInstalled(ID string) bool {
 
 func SetEdgeAppNotInstalled(ID string) bool {
 
+	// Stop the app first
+	StopEdgeApp(ID)
+
+	// Now remove any files
 	result := true
+	
 	err := os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + runnableFilename)
 	if err != nil {
 		result = false
-		log.Fatal(err)
+		log.Println(err)
+	}
+
+	err = os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + authEnvFilename)
+	if err != nil {
+		result = false
+		log.Println(err)
+	}
+
+	err = os.RemoveAll(utils.GetPath(utils.EdgeAppsPath) + ID + appdataFoldername)
+	if err != nil {
+		result = false
+		log.Println(err)
+	}
+
+	err = os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + myEdgeAppServiceEnvFilename)
+	if err != nil {
+		result = false
+		log.Println(err)
+	}
+
+	err = os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + optionsEnvFilename)
+	if err != nil {
+		result = false
+		log.Println(err)
 	}
 
 	buildFrameworkContainers()
