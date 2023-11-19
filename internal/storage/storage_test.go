@@ -7,14 +7,7 @@ import (
 )
 
 func TestGetDevices(t *testing.T) {
-
-	t.Log("Testing with release version dev")
-	assertGetDevices(GetDevices("dev"), t)
-	t.Log("Testing with release version prod")
-	assertGetDevices(GetDevices("prod"), t)
-	t.Log("Testing with release version cloud")
-	assertGetDevices(GetDevices("cloud"), t)
-
+	assertGetDevices(GetDevices(), t)
 }
 
 func assertGetDevices(devices []Device, t *testing.T) {
