@@ -1,4 +1,4 @@
-.PHONY: build
+.DEFAULT_GOAL := build
 
 PROJECT ?= github.com/edgebox-iot/edgeboxctl
 RELEASE ?= dev
