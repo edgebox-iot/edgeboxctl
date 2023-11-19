@@ -9,25 +9,10 @@ GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 
 
-build-all:
+build-all: clean
 	GOOS=linux GOARCH=amd64 make build
 	GOOS=linux GOARCH=arm make build
-
-build-prod:
-	GOOS=linux GOARCH=arm RELEASE=prod make build
-
-build-cloud:
-	GOOS=linux GOARCH=amd64 RELEASE=cloud make build
-
-build-arm64:
-	GOOS=linux GOARCH=arm64 RELEASE=prod make build
-
-build-armhf:
-	GOOS=linux GOARCH=arm RELEASE=prod make build
-
-build-amd64:
-	GOOS=linux GOARCH=amd64 RELEASE=prod make build
-
+	GOOS=linux GOARCH=arm64 make build
 
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
@@ -57,11 +42,7 @@ install:
 	@echo "Edgeboxctl installed successfully"
 	@echo "To start edgeboxctl run: systemctl start edgeboxctl"
 
-install-prod: build-prod install
-install-cloud: build-cloud install
-install-arm64: build-arm64 install
-install-armhf: build-armhf install
-install-amd64: build-amd64 install
+build-install: build install
 
 start:
 	systemctl start edgeboxctl
