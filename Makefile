@@ -1,9 +1,13 @@
-PROJECT?=github.com/edgebox-iot/edgeboxctl
+.DEFAULT_GOAL := build
 
+PROJECT ?= github.com/edgebox-iot/edgeboxctl
 RELEASE ?= dev
 COMMIT := $(shell git rev-parse --short HEAD)
 BUILD_DATE := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 BUILD_DIR = bin
+GOOS := $(shell go env GOOS)
+GOARCH := $(shell go env GOARCH)
+
 
 build-all:
 	GOOS=linux GOARCH=amd64 make build
@@ -32,7 +36,6 @@ build:
 		-X ${PROJECT}/internal/diagnostics.Commit=${COMMIT} \
 		-X ${PROJECT}/internal/diagnostics.BuildDate=${BUILD_DATE}" \
 		-o bin/edgeboxctl-${GOOS}-${GOARCH} ${PROJECT}/cmd/edgeboxctl
-	cp ./bin/edgeboxctl-${GOOS}-${GOARCH} ./bin/edgeboxctl
 
 clean:
 	rm -rf ${BUILD_DIR}
@@ -68,4 +71,3 @@ stop:
 
 log: start
 	journalctl -fu edgeboxctl
-
