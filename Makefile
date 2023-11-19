@@ -19,6 +19,16 @@ build-prod:
 build-cloud:
 	GOOS=linux GOARCH=amd64 RELEASE=cloud make build
 
+build-arm64:
+	GOOS=linux GOARCH=arm64 RELEASE=prod make build
+
+build-armhf:
+	GOOS=linux GOARCH=arm RELEASE=prod make build
+
+build-amd64:
+	GOOS=linux GOARCH=amd64 RELEASE=prod make build
+
+
 build:
 	@echo "Building ${GOOS}-${GOARCH}"
 	GOOS=${GOOS} GOARCH=${GOARCH} go build \
@@ -38,16 +48,27 @@ test:
 test-with-coverage:
 	go test -tags=unit -timeout=600s -v ./... -coverprofile=coverage.out
 
-install-cloud: build-cloud
-	cp ./bin/edgeboxctl /usr/local/bin/edgeboxctl
-	cp ./edgeboxctl/edgeboxctl.service /lib/systemd/system/edgeboxctl.service
-	systemctl daemon-reload
+install:
+	sudo systemctl stop edgeboxctl || true
+	sudo rm -rf /usr/local/bin/edgeboxctl /usr/local/sbin/edgeboctl /lib/systemd/system/edgeboxctl.service
+	sudo cp ./bin/edgeboxctl /usr/local/bin/edgeboxctl
+	sudo cp ./bin/edgeboxctl /usr/local/sbin/edgeboxctl
+	sudo cp ./edgeboxctl.service /lib/systemd/system/edgeboxctl.service
+	sudo systemctl daemon-reload
 	@echo "Edgeboxctl installed successfully"
 	@echo "To start edgeboxctl run: systemctl start edgeboxctl"
 
-install-prod: build-prod
-	cp ./bin/edgeboxctl /usr/local/bin/edgeboxctl
-	cp ./edgeboxctl/edgeboxctl.service /lib/systemd/system/edgeboxctl.service
-	systemctl daemon-reload
-	@echo "Edgeboxctl installed successfully"
-	@echo "To start edgeboxctl run: systemctl start edgeboxctl"
+install-prod: build-prod install
+install-cloud: build-cloud install
+install-arm64: build-arm64 install
+install-armhf: build-armhf install
+install-amd64: build-amd64 install
+
+start:
+	systemctl start edgeboxctl
+
+stop:
+	systemctl stop edgeboxctl
+
+log: start
+	journalctl -fu edgeboxctl

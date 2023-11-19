@@ -21,3 +21,6 @@ main
 # Build
 
 /bin
+
+# Logs from executed scripts
+/scripts/output.log

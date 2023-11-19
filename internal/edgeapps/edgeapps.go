@@ -6,9 +6,10 @@ import (
 	"os"
 	"strings"
 	"time"
-
+	
 	"github.com/joho/godotenv"
 
+	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 )
 
@@ -22,6 +23,9 @@ type EdgeApp struct {
 	InternetAccessible bool             `json:"internet_accessible"`
 	NetworkURL         string           `json:"network_url"`
 	InternetURL        string           `json:"internet_url"`
+	Options			   []EdgeAppOption  `json:"options"`
+	NeedsConfig		   bool             `json:"needs_config"`
+	Login              EdgeAppLogin	 	`json:"login"`
 }
 
 // MaybeEdgeApp : Boolean flag for validation of edgeapp existance
@@ -42,9 +46,29 @@ type EdgeAppService struct {
 	IsRunning bool   `json:"is_running"`
 }
 
+type EdgeAppOption struct {
+	Key             string `json:"key"`
+	Value           string `json:"value"`
+	DefaultValue    string `json:"default_value"`
+	Format          string `json:"format"`
+	Description     string `json:"description"`
+	IsSecret        bool   `json:"is_secret"`
+	IsInstallLocked bool   `json:"is_install_locked"`
+}
+
+type EdgeAppLogin struct {
+	Enabled  bool   `json:"enabled"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 const configFilename = "/edgebox-compose.yml"
 const envFilename = "/edgebox.env"
+const optionsTemplateFilename = "/edgeapp.template.env"
+const optionsEnvFilename = "/edgeapp.env"
+const authEnvFilename = "/auth.env"
 const runnableFilename = "/.run"
+const appdataFoldername = "/appdata"
 const myEdgeAppServiceEnvFilename = "/myedgeapp.env"
 const defaultContainerOperationSleepTime time.Duration = time.Second * 10
 
@@ -62,6 +86,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 
 		edgeAppName := ID
 		edgeAppDescription := ""
+		edgeAppOptions := []EdgeAppOption{}
 
 		edgeAppEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + envFilename)
 
@@ -76,6 +101,103 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 			}
 		}
 
+		needsConfig := false
+		hasFilledOptions := false
+		edgeAppOptionsTemplate, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + optionsTemplateFilename)
+		if err != nil {
+			log.Println("Error loading options template file for edgeapp " + edgeAppName)
+		} else {
+			// Try to read the edgeAppOptionsEnv file
+			edgeAppOptionsEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + optionsEnvFilename)
+			if err != nil {
+				log.Println("Error loading options env file for edgeapp " + edgeAppName)
+			} else {
+				hasFilledOptions = true
+			}
+
+			for key, value := range edgeAppOptionsTemplate {
+				
+				optionFilledValue := ""
+				if hasFilledOptions {
+					// Check if key exists in edgeAppOptionsEnv
+					optionFilledValue = edgeAppOptionsEnv[key]
+				}
+
+				format := ""
+				defaultValue := ""
+				description := ""
+				installLocked := false
+
+				// Parse value to separate by | and get the format, installLocked, description and default value
+				// Format is the first element
+				// InstallLocked is the second element
+				// Description is the third element
+				// Default value is the fourth element
+
+				valueSlices := strings.Split(value, "|")
+				if len(valueSlices) > 0 {
+					format = valueSlices[0]
+				}
+				if len(valueSlices) > 1 {
+					installLocked = valueSlices[1] == "true"
+				}
+				if len(valueSlices) > 2 {
+					description = valueSlices[2]
+				}
+				if len(valueSlices) > 3 {
+					defaultValue = valueSlices[3]
+				}
+
+				// // If value contains ">|", then get everything that is to the right of it as the description
+				// // and get everything between "<>" as the format
+				// if strings.Contains(value, ">|") {
+				// 	description = strings.Split(value, ">|")[1]
+				// 	// Check if description has default value. That would be everything that is to the right of the last "|"
+				// 	if strings.Contains(description, "|") {
+				// 		defaultValue = strings.Split(description, "|")[1]
+				// 		description = strings.Split(description, "|")[0]
+				// 	}
+
+				// 	value = strings.Split(value, ">|")[0]
+				// 	// Remove the initial < from value
+				// 	value = strings.TrimPrefix(value, "<")
+				// } else {
+				// 	// Trim initial < and final > from value
+				// 	value = strings.TrimPrefix(value, "<")
+				// 	value = strings.TrimSuffix(value, ">")
+				// }
+
+				isSecret := false
+
+				// Check if the lowercased key string contains the letters "pass", "secret", "key"
+				lowercaseKey := strings.ToLower(key)
+				// check if lowercaseInput contains "pass", "key", or "secret", or "token"
+				if strings.Contains(lowercaseKey, "pass") ||
+					strings.Contains(lowercaseKey, "key") ||
+					strings.Contains(lowercaseKey, "secret") ||
+					strings.Contains(lowercaseKey, "token") {
+					isSecret = true
+				}
+
+				currentOption := EdgeAppOption{
+					Key:             key,
+					Value:           optionFilledValue,
+					DefaultValue:    defaultValue,
+					Description:     description,
+					Format:          format,
+					IsSecret:        isSecret,
+					IsInstallLocked: installLocked,
+				}
+				edgeAppOptions = append(edgeAppOptions, currentOption)
+
+				if optionFilledValue == "" {
+					needsConfig = true
+				}
+
+			}
+		}
+
+
 		edgeAppInternetAccessible := false
 		edgeAppInternetURL := ""
 
@@ -89,6 +211,21 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 			}
 		}
 
+		edgeAppBasicAuthEnabled := false
+		edgeAppBasicAuthUsername := ""
+		edgeAppBasicAuthPassword := ""
+
+		edgeAppAuthEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + authEnvFilename)
+		if err != nil {
+			log.Println("No auth.env file found. Login status is disabled.")
+		} else {
+			if edgeAppAuthEnv["USERNAME"] != "" && edgeAppAuthEnv["PASSWORD"] != "" {
+				edgeAppBasicAuthEnabled = true
+				edgeAppBasicAuthUsername = edgeAppAuthEnv["USERNAME"]
+				edgeAppBasicAuthPassword = edgeAppAuthEnv["PASSWORD"]
+			}
+		}
+
 		result = MaybeEdgeApp{
 			EdgeApp: EdgeApp{
 				ID:                 ID,
@@ -97,8 +234,12 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 				Status:             GetEdgeAppStatus(ID),
 				Services:           GetEdgeAppServices(ID),
 				InternetAccessible: edgeAppInternetAccessible,
-				NetworkURL:         ID + ".edgebox.local",
+				NetworkURL:         ID + "." + system.GetHostname() + ".local",
 				InternetURL:        edgeAppInternetURL,
+				Options: 		    edgeAppOptions,
+				NeedsConfig:        needsConfig,
+				Login:				EdgeAppLogin{edgeAppBasicAuthEnabled, edgeAppBasicAuthUsername, edgeAppBasicAuthPassword},
+				
 			},
 			Valid: true,
 		}
@@ -153,11 +294,40 @@ func SetEdgeAppInstalled(ID string) bool {
 
 func SetEdgeAppNotInstalled(ID string) bool {
 
+	// Stop the app first
+	StopEdgeApp(ID)
+
+	// Now remove any files
 	result := true
+	
 	err := os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + runnableFilename)
 	if err != nil {
 		result = false
-		log.Fatal(err)
+		log.Println(err)
+	}
+
+	err = os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + authEnvFilename)
+	if err != nil {
+		result = false
+		log.Println(err)
+	}
+
+	err = os.RemoveAll(utils.GetPath(utils.EdgeAppsPath) + ID + appdataFoldername)
+	if err != nil {
+		result = false
+		log.Println(err)
+	}
+
+	err = os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + myEdgeAppServiceEnvFilename)
+	if err != nil {
+		result = false
+		log.Println(err)
+	}
+
+	err = os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + optionsEnvFilename)
+	if err != nil {
+		result = false
+		log.Println(err)
 	}
 
 	buildFrameworkContainers()
@@ -294,6 +464,36 @@ func StopEdgeApp(ID string) EdgeAppStatus {
 
 	return GetEdgeAppStatus(ID)
 
+}
+
+// StopAllEdgeApps: Stops all EdgeApps and returns a count of how many were stopped
+func StopAllEdgeApps() int {
+	edgeApps := GetEdgeApps()
+	appCount := 0
+	for _, edgeApp := range edgeApps {
+		StopEdgeApp(edgeApp.ID)
+		appCount++
+	}
+
+	return appCount
+
+}
+
+// StartAllEdgeApps: Starts all EdgeApps and returns a count of how many were started
+func StartAllEdgeApps() int {	
+	edgeApps := GetEdgeApps()
+	appCount := 0
+	for _, edgeApp := range edgeApps {
+		RunEdgeApp(edgeApp.ID)
+		appCount++
+	}
+
+	return appCount
+
+}
+
+func RestartEdgeAppsService() {
+	buildFrameworkContainers()
 }
 
 // EnableOnline : Write environment file and rebuild the necessary containers. Rebuilds containers in project (in case of change only)

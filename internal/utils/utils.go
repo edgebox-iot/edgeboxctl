@@ -16,7 +16,7 @@ import (
 )
 
 // ExecAndStream : Runs a terminal command, but streams progress instead of outputting. Ideal for long lived process that need to be logged.
-func ExecAndStream(path string, command string, args []string) {
+func ExecAndStream(path string, command string, args []string) string {
 
 	cmd := exec.Command(command, args...)
 
@@ -27,13 +27,17 @@ func ExecAndStream(path string, command string, args []string) {
 
 	err := cmd.Run()
 
+	outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
+
+	returnVal := outStr
 	if err != nil {
 		fmt.Printf("cmd.Run() failed with %s\n", err)
+		returnVal = errStr
 	}
 
-	outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
 	fmt.Printf("\nout:\n%s\nerr:\n%s\n", outStr, errStr)
 
+	return returnVal
 }
 
 // Exec : Runs a terminal Command, catches and logs errors, returns the result.
@@ -100,11 +104,15 @@ func GetSQLiteFormattedDateTime(t time.Time) string {
 	return formatedDatetime
 }
 
+const BackupPasswordFileLocation string = "backupPasswordFileLocation"
 const CloudEnvFileLocation string = "cloudEnvFileLocation"
 const ApiEnvFileLocation string = "apiEnvFileLocation"
 const ApiPath string = "apiPath"
 const EdgeAppsPath string = "edgeAppsPath"
+const EdgeAppsBackupPath string = "edgeAppsBackupPath"
 const WsPath string = "wsPath"
+const LoggerPath string = "loggerPath"
+
 
 // GetPath : Returns either the hardcoded path, or a overwritten value via .env file at project root. Register paths here for seamless working code between dev and prod environments ;)
 func GetPath(pathKey string) string {
@@ -124,7 +132,7 @@ func GetPath(pathKey string) string {
 		if env["CLOUD_ENV_FILE_LOCATION"] != "" {
 			targetPath = env["CLOUD_ENV_FILE_LOCATION"]
 		} else {
-			targetPath = "/home/system/components/edgeboxctl/cloud.env"
+			targetPath = "/home/system/components/api/cloud.env"
 		}
 
 	case ApiEnvFileLocation:
@@ -151,12 +159,34 @@ func GetPath(pathKey string) string {
 			targetPath = "/home/system/components/apps/"
 		}
 
+	case EdgeAppsBackupPath:
+		if env["EDGEAPPS_BACKUP_PATH"] != "" {
+			targetPath = env["EDGEAPPS_BACKUP_PATH"]
+		} else {
+			targetPath = "/home/system/components/backups/"
+		}
+
 	case WsPath:
 
 		if env["WS_PATH"] != "" {
 			targetPath = env["WS_PATH"]
 		} else {
 			targetPath = "/home/system/components/ws/"
+		}
+
+	case LoggerPath:
+		if env["LOGGER_PATH"] != "" {
+			targetPath = env["LOGGER_PATH"]
+		} else {
+			targetPath = "/home/system/components/logger/"
+		}
+
+	case BackupPasswordFileLocation:
+
+		if env["BACKUP_PASSWORD_FILE_LOCATION"] != "" {
+			targetPath = env["BACKUP_PASSWORD_FILE_LOCATION"]
+		} else {
+			targetPath = "/home/system/components/backups/pw.txt"
 		}
 
 	default:
@@ -186,6 +216,50 @@ func WriteOption(optionKey string, optionValue string) {
 	formatedDatetime := GetSQLiteFormattedDateTime(time.Now())
 
 	_, err = statement.Exec(optionKey, optionValue, formatedDatetime, formatedDatetime) // Execute SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	db.Close()
+}
+
+// ReadOption : Reads a key value pair option from the api shared database
+func ReadOption(optionKey string) string {
+	
+	db, err := sql.Open("sqlite3", GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	var optionValue string
+
+	err = db.QueryRow("SELECT value FROM option WHERE name = ?", optionKey).Scan(&optionValue)
+
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	db.Close()
+
+	return optionValue
+}
+
+// DeleteOption : Deletes a key value pair option from the api shared database
+func DeleteOption(optionKey string) {
+	
+	db, err := sql.Open("sqlite3", GetSQLiteDbConnectionDetails())
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	statement, err := db.Prepare("DELETE FROM option WHERE name = ?;") // Prepare SQL Statement
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	_, err = statement.Exec(optionKey) // Execute SQL Statement
 	if err != nil {
 		log.Fatal(err.Error())
 	}
