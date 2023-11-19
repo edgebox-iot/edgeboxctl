@@ -50,8 +50,8 @@ test-with-coverage:
 install:
 	sudo systemctl stop edgeboxctl || true
 	sudo rm -rf /usr/local/bin/edgeboxctl /usr/local/sbin/edgeboctl /lib/systemd/system/edgeboxctl.service
-	sudo cp ./bin/edgeboxctl /usr/local/bin/edgeboxctl
-	sudo cp ./bin/edgeboxctl /usr/local/sbin/edgeboxctl
+	sudo cp ./bin/edgeboxctl-${GOOS}-${GOARCH} /usr/local/bin/edgeboxctl
+	sudo cp ./bin/edgeboxctl-${GOOS}-${GOARCH} /usr/local/sbin/edgeboxctl
 	sudo cp ./edgeboxctl.service /lib/systemd/system/edgeboxctl.service
 	sudo systemctl daemon-reload
 	@echo "Edgeboxctl installed successfully"
