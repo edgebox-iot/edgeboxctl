@@ -82,6 +82,7 @@ func SetupCloudOptions() {
 
 	if err != nil {
 		fmt.Println("Error loading .env file for cloud version setup")
+		return
 	}
 
 	if cloudEnv["NAME"] != "" {

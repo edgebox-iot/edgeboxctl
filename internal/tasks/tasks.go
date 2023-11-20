@@ -164,212 +164,207 @@ func ExecuteTask(task Task) Task {
 		log.Fatal(err.Error())
 	}
 
-	if diagnostics.GetReleaseVersion() == diagnostics.DEV_VERSION {
-		log.Printf("Dev environemnt. Not executing tasks.")
-	} else {
-		log.Println("Task: " + task.Task)
-		log.Println("Args: " + task.Args.String)
-		switch task.Task {
-		case "setup_backups":
+	log.Println("Task: " + task.Task)
+	log.Println("Args: " + task.Args.String)
+	switch task.Task {
+	case "setup_backups":
 
-			log.Println("Setting up Backups Destination...")
-			var args taskSetupBackupsArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Println("Error reading arguments of setup_backups task.")
-			} else {
-				taskResult := taskSetupBackups(args)
-				taskResultBool := true
-				// Check if returned taskResult string contains "error"
-				if strings.Contains(taskResult, "error") {
-					taskResultBool = false
-				}
-				task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
-			}
-
-		case "start_backup":
-
-			log.Println("Backing up Edgebox...")
-			taskResult := taskBackup()
+		log.Println("Setting up Backups Destination...")
+		var args taskSetupBackupsArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Println("Error reading arguments of setup_backups task.")
+		} else {
+			taskResult := taskSetupBackups(args)
 			taskResultBool := true
 			// Check if returned taskResult string contains "error"
 			if strings.Contains(taskResult, "error") {
 				taskResultBool = false
 			}
 			task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
-
-		case "restore_backup":
-			log.Println("Attempting to Restore Last Backup to Edgebox")
-			taskResult := taskRestoreBackup()
-			taskResultBool := true
-			// Check if returned taskResult string contains "error"
-			if strings.Contains(taskResult, "error") {
-				taskResultBool = false
-			}
-			task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
-
-		case "setup_tunnel":
-
-			log.Println("Setting up Cloudflare Tunnel...")
-			var args taskSetupTunnelArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of setup_tunnel task: %s", err)
-				status := "{\"status\": \"error\", \"message\": \"The Domain Name you are going to Authorize must be provided beforehand! Please insert a domain name and try again.\"}"
-				utils.WriteOption("TUNNEL_STATUS", status)
-			} else {
-				taskResult := taskSetupTunnel(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "start_tunnel":
-
-			log.Println("Starting Cloudflare Tunnel...")
-			taskResult := taskStartTunnel()
-			task.Result = sql.NullString{String: taskResult, Valid: true}
-
-		case "stop_tunnel":
-
-			log.Println("Stopping Cloudflare Tunnel...")
-			taskResult := taskStopTunnel()
-			task.Result = sql.NullString{String: taskResult, Valid: true}
-		
-		case "disable_tunnel":
-
-			log.Println("Disabling Cloudflare Tunnel...")
-			taskResult := taskDisableTunnel()
-			task.Result = sql.NullString{String: taskResult, Valid: true}
-
-		case "install_edgeapp":
-
-			log.Println("Installing EdgeApp...")
-			var args taskInstallEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of install_edgeapp task: %s", err)
-			} else {
-				taskResult := taskInstallEdgeApp(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "remove_edgeapp":
-
-			log.Println("Removing EdgeApp...")
-			var args taskRemoveEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of remove_edgeapp task: %s", err)
-			} else {
-				taskResult := taskRemoveEdgeApp(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "start_edgeapp":
-
-			log.Println("Starting EdgeApp...")
-			var args taskStartEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of start_edgeapp task: %s", err)
-			} else {
-				taskResult := taskStartEdgeApp(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "stop_edgeapp":
-
-			log.Println("Stopping EdgeApp...")
-			var args taskStopEdgeAppArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of stop_edgeapp task: %s", err)
-			} else {
-				taskResult := taskStopEdgeApp(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "set_edgeapp_options":
-
-			log.Println("Setting EdgeApp Options...")
-			var args taskSetEdgeAppOptionsArgs
-			// {"id":"podgrab","options":{"PODGRAB_PASSWORD":"fumarmata"}}
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of set_edgeapp_options task: %s", err)
-			} else {
-				taskResult := taskSetEdgeAppOptions(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "set_edgeapp_basic_auth":
-
-			log.Println("Settig EdgeApp Basic Authentication...")
-			var args taskSetEdgeAppBasicAuthArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of set_edgeapp_basic_auth task: %s", err)
-			} else {
-				taskResult := taskSetEdgeAppBasicAuth(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "remove_edgeapp_basic_auth":
-
-			log.Println("Removing EdgeApp Basic Authentication...")
-			var args taskRemoveEdgeAppBasicAuthArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of remove_edgeapp_basic_auth task: %s", err)
-			} else {
-				taskResult := taskRemoveEdgeAppBasicAuth(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "enable_online":
-
-			log.Println("Enabling online access to EdgeApp...")
-			var args taskEnableOnlineArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of enable_online task: %s", err)
-			} else {
-				taskResult := taskEnableOnline(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "disable_online":
-
-			log.Println("Disabling online access to EdgeApp...")
-			var args taskDisableOnlineArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of enable_online task: %s", err)
-			} else {
-				taskResult := taskDisableOnline(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "enable_public_dashboard":
-
-			log.Println("Enabling online access to Dashboard...")
-			var args taskEnablePublicDashboardArgs
-			err := json.Unmarshal([]byte(task.Args.String), &args)
-			if err != nil {
-				log.Printf("Error reading arguments of enable_public_dashboard task: %s", err)
-			} else {
-				taskResult := taskEnablePublicDashboard(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}
-			}
-
-		case "disable_public_dashboard":
-
-			log.Println("Disabling online access to Dashboard...")
-			taskResult := taskDisablePublicDashboard()
-			task.Result = sql.NullString{String: taskResult, Valid: true}
-
 		}
 
+	case "start_backup":
+
+		log.Println("Backing up Edgebox...")
+		taskResult := taskBackup()
+		taskResultBool := true
+		// Check if returned taskResult string contains "error"
+		if strings.Contains(taskResult, "error") {
+			taskResultBool = false
+		}
+		task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
+
+	case "restore_backup":
+		log.Println("Attempting to Restore Last Backup to Edgebox")
+		taskResult := taskRestoreBackup()
+		taskResultBool := true
+		// Check if returned taskResult string contains "error"
+		if strings.Contains(taskResult, "error") {
+			taskResultBool = false
+		}
+		task.Result = sql.NullString{String: taskResult, Valid: taskResultBool}
+
+	case "setup_tunnel":
+
+		log.Println("Setting up Cloudflare Tunnel...")
+		var args taskSetupTunnelArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of setup_tunnel task: %s", err)
+			status := "{\"status\": \"error\", \"message\": \"The Domain Name you are going to Authorize must be provided beforehand! Please insert a domain name and try again.\"}"
+			utils.WriteOption("TUNNEL_STATUS", status)
+		} else {
+			taskResult := taskSetupTunnel(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "start_tunnel":
+
+		log.Println("Starting Cloudflare Tunnel...")
+		taskResult := taskStartTunnel()
+		task.Result = sql.NullString{String: taskResult, Valid: true}
+
+	case "stop_tunnel":
+
+		log.Println("Stopping Cloudflare Tunnel...")
+		taskResult := taskStopTunnel()
+		task.Result = sql.NullString{String: taskResult, Valid: true}
+	
+	case "disable_tunnel":
+
+		log.Println("Disabling Cloudflare Tunnel...")
+		taskResult := taskDisableTunnel()
+		task.Result = sql.NullString{String: taskResult, Valid: true}
+
+	case "install_edgeapp":
+
+		log.Println("Installing EdgeApp...")
+		var args taskInstallEdgeAppArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of install_edgeapp task: %s", err)
+		} else {
+			taskResult := taskInstallEdgeApp(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "remove_edgeapp":
+
+		log.Println("Removing EdgeApp...")
+		var args taskRemoveEdgeAppArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of remove_edgeapp task: %s", err)
+		} else {
+			taskResult := taskRemoveEdgeApp(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "start_edgeapp":
+
+		log.Println("Starting EdgeApp...")
+		var args taskStartEdgeAppArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of start_edgeapp task: %s", err)
+		} else {
+			taskResult := taskStartEdgeApp(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "stop_edgeapp":
+
+		log.Println("Stopping EdgeApp...")
+		var args taskStopEdgeAppArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of stop_edgeapp task: %s", err)
+		} else {
+			taskResult := taskStopEdgeApp(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "set_edgeapp_options":
+
+		log.Println("Setting EdgeApp Options...")
+		var args taskSetEdgeAppOptionsArgs
+		// {"id":"podgrab","options":{"PODGRAB_PASSWORD":"fumarmata"}}
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of set_edgeapp_options task: %s", err)
+		} else {
+			taskResult := taskSetEdgeAppOptions(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "set_edgeapp_basic_auth":
+
+		log.Println("Settig EdgeApp Basic Authentication...")
+		var args taskSetEdgeAppBasicAuthArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of set_edgeapp_basic_auth task: %s", err)
+		} else {
+			taskResult := taskSetEdgeAppBasicAuth(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "remove_edgeapp_basic_auth":
+
+		log.Println("Removing EdgeApp Basic Authentication...")
+		var args taskRemoveEdgeAppBasicAuthArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of remove_edgeapp_basic_auth task: %s", err)
+		} else {
+			taskResult := taskRemoveEdgeAppBasicAuth(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "enable_online":
+
+		log.Println("Enabling online access to EdgeApp...")
+		var args taskEnableOnlineArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of enable_online task: %s", err)
+		} else {
+			taskResult := taskEnableOnline(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "disable_online":
+
+		log.Println("Disabling online access to EdgeApp...")
+		var args taskDisableOnlineArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of enable_online task: %s", err)
+		} else {
+			taskResult := taskDisableOnline(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "enable_public_dashboard":
+
+		log.Println("Enabling online access to Dashboard...")
+		var args taskEnablePublicDashboardArgs
+		err := json.Unmarshal([]byte(task.Args.String), &args)
+		if err != nil {
+			log.Printf("Error reading arguments of enable_public_dashboard task: %s", err)
+		} else {
+			taskResult := taskEnablePublicDashboard(args)
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+		}
+
+	case "disable_public_dashboard":
+
+		log.Println("Disabling online access to Dashboard...")
+		taskResult := taskDisablePublicDashboard()
+		task.Result = sql.NullString{String: taskResult, Valid: true}
 	}
+
 
 	statement, err = db.Prepare("Update task SET status = ?, result = ?, updated = ? WHERE ID = ?;") // Prepare SQL Statement
 	if err != nil {
@@ -427,10 +422,9 @@ func ExecuteSchedules(tick int) {
 		// 	})
 		// }
 
-		if diagnostics.GetReleaseVersion() == diagnostics.CLOUD_VERSION {
-			log.Println("Setting up cloud version options (name, email, api token)")
-			taskSetupCloudOptions()
-		}
+
+		log.Println("Setting up cloud version options (name, email, api token)")
+		taskSetupCloudOptions()
 
 		// Executing on startup (first tick). Schedules run before tasks in the SystemIterator
 		uptime := taskGetSystemUptime()
@@ -1196,7 +1190,7 @@ func taskGetSystemUptime() string {
 func taskGetStorageDevices() string {
 	fmt.Println("Executing taskGetStorageDevices")
 
-	devices := storage.GetDevices(diagnostics.GetReleaseVersion())
+	devices := storage.GetDevices()
 	devicesJSON, _ := json.Marshal(devices)
 
 	utils.WriteOption("STORAGE_DEVICES_LIST", string(devicesJSON))
