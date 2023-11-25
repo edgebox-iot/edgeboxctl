@@ -100,6 +100,10 @@ type taskSetupBackupsArgs struct {
 	RepositoryPassword string `json:"repository_password"`
 }
 
+type taskStartShellArgs struct {
+	Timeout int `json:"timeout"`
+}
+
 
 const STATUS_CREATED int = 0
 const STATUS_EXECUTING int = 1
@@ -238,6 +242,22 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Disabling Cloudflare Tunnel...")
 			taskResult := taskDisableTunnel()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
+		case "start_shell":
+			log.Println("Starting SSHX.io Shell")
+			var args taskStartShellArgs
+			err := json.Unmarshal([]byte(task.Args.String), &args)
+			if err != nil {
+				log.Printf("Error reading arguments or start_shell task: %s", err)
+			} else {
+				taskResult := taskStartShell(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}												
+			}
+
+		case "stop_shell":
+			log.Println("Stopping SSHX.io Shell...")
+			taskResult := taskStopShell()
 			task.Result = sql.NullString{String: taskResult, Valid: true}
 
 		case "install_edgeapp":
@@ -929,6 +949,78 @@ func taskDisableTunnel() string {
 	utils.DeleteOption("DOMAIN_NAME")
 	utils.DeleteOption("TUNNEL_STATUS")
 	return "{\"status\": \"ok\"}"
+}
+
+func taskStartShell(args taskStartShellArgs) string {
+	fmt.Println("Executing taskStartShell")
+	wsPath := utils.GetPath(utils.WsPath)
+
+	// kill the process if its running
+	utils.Exec(wsPath, "killall", []string{"sshx"})
+
+	cmd := exec.Command("/usr/local/bin/sshx", "--quiet", "--shell", "bash")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	scanner := bufio.NewScanner(stdout)
+	err = cmd.Start()
+	if err != nil {
+		panic(err)
+	}
+	url := ""
+
+	timeout := args.Timeout
+
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+		text := scanner.Text()
+		if strings.Contains(text, "https://") {
+			url = text
+			fmt.Println("Shell start is responding with URL: " + url)
+			utils.WriteOption("SHELL_URL", url)
+			utils.WriteOption("SHELL_STATUS", "running")
+			break
+		}
+	}
+	if scanner.Err() != nil {
+		cmd.Process.Kill()
+		cmd.Wait()
+		panic(scanner.Err())
+	}
+
+	go func() {
+		fmt.Println("Running shell async")
+		
+		// cmd.Wait()
+
+		// Keep retrying to calculate timeout to know when to kill the process
+		for {
+			timeout = timeout - 1
+			if timeout <= 0 {
+				fmt.Println("Timeout reached, killing process...")
+				utils.Exec(wsPath, "killall sshx", []string{})
+				utils.WriteOption("SHELL_STATUS", "not_running")
+				break
+			}
+			fmt.Println("Active Shell Timeout is " + fmt.Sprint(timeout) + " seconds")
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
+	return "{\"status\": \"ok\"}"
+}
+
+func taskStopShell() string {
+	fmt.Println("Executing taskStopShell")
+	wsPath := utils.GetPath(utils.WsPath)
+
+	// kill the process if its running
+	utils.Exec(wsPath, "killall", []string{"sshx"})
+	utils.WriteOption("SHELL_STATUS", "not_running")
+
+	return "{\"status\": \"ok\"}"
+
 }
 
 func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
