@@ -416,12 +416,24 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 	var edgeAppServices []EdgeAppService
 
 	for _, serviceID := range serviceSlices {
-		cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "exec", "-T", serviceID, "echo", "'Service Check'"}
-		cmdResult := utils.Exec(wsPath, "docker-compose", cmdArgs)
+		shouldBeRunning := false
 		isRunning := false
-		if cmdResult != "" {
-			isRunning = true
+
+		// Check if the service is marked as "runnable" with the .run lockfile in the app folder
+		_, err := os.Stat(utils.GetPath(utils.EdgeAppsPath) + ID + "/" + serviceID + runnableFilename)
+		if !os.IsNotExist(err) {
+			shouldBeRunning = true
 		}
+
+		// Check if the service is actually running
+		if shouldBeRunning {
+			cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "exec", "-T", serviceID, "echo", "'Service Check'"}
+			cmdResult := utils.Exec(wsPath, "docker-compose", cmdArgs)
+			if cmdResult != "" {
+				isRunning = true
+			}
+		}
+
 		edgeAppServices = append(edgeAppServices, EdgeAppService{ID: serviceID, IsRunning: isRunning})
 	}
 
