@@ -419,8 +419,8 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 		shouldBeRunning := false
 		isRunning := false
 
-		// Check if the service is marked as "runnable" with the .run lockfile in the app folder
-		_, err := os.Stat(utils.GetPath(utils.EdgeAppsPath) + ID + "/" + serviceID + runnableFilename)
+		// Is service "runnable" when .run lockfile in the app folder
+		_, err := os.Stat(utils.GetPath(utils.EdgeAppsPath) + ID + runnableFilename)
 		if !os.IsNotExist(err) {
 			shouldBeRunning = true
 		}
