@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"strconv"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,12 +74,13 @@ const (
 	DISK_TYPE_SDA   DeviceIdentifier = "sda"
 	DISK_TYPE_MCBLK DeviceIdentifier = "mmcblk0"
 	DISK_TYPE_VDA   DeviceIdentifier = "vda"
+	MIN_DISK_SIZE   int              = 1048576 // 1GB in bytes
 )
 
 func GetDeviceIdentifier(release_version diagnostics.ReleaseVersion) DeviceIdentifier {
 	switch release_version {
 	case diagnostics.CLOUD_VERSION:
-		return DISK_TYPE_VDA
+		return DISK_TYPE_SDA
 	case diagnostics.PROD_VERSION:
 		return DISK_TYPE_MCBLK
 	}
@@ -134,7 +136,13 @@ func GetDevices(release_version diagnostics.ReleaseVersion) []Device {
 				currentDevice.InUse = currentDeviceInUseFlag
 				currentDeviceInUseFlag = false
 				currentPartitions = []Partition{}
-				devices = append(devices, currentDevice)
+				size, err := strconv.Atoi(currentDevice.Size)
+				if err != nil {
+					size = 0
+				}
+				if size > MIN_DISK_SIZE {
+					devices = append(devices, currentDevice)
+				}
 			} else {
 				firstDevice = false
 			}
@@ -193,8 +201,22 @@ func GetDevices(release_version diagnostics.ReleaseVersion) []Device {
 		currentDevice.Status.Description = "Not configured"
 	}
 	currentDevice.InUse = currentDeviceInUseFlag
-	devices = append([]Device{currentDevice}, devices...) // Prepending the first device...
 
+	fmt.Println("Secondary Storage Devices Found: ", len(devices))
+	fmt.Println("Main Storage Device size: ", currentDevice.Size)
+
+	// only append device if size > 1GB
+	if currentDevice.Size != "" && currentDevice.Size != "0" {
+		// Convert size to int
+		// Convert string to int
+		size, err := strconv.Atoi(currentDevice.Size)
+		if err != nil {
+			size = 0
+		}
+		if size > MIN_DISK_SIZE {
+			devices = append([]Device{currentDevice}, devices...) // Prepending the first device...
+		}
+	}
 	devices = getDevicesSpaceUsage(devices)
 
 	return devices
