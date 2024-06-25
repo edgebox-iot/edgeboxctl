@@ -425,3 +425,94 @@ func CopyFile(src string, dest string) error {
     return nil
 }
 
+func CheckUpdates() {
+	fmt.Println("Checking for Edgebox System Updates.")
+	
+	// Configure the service and start it
+	cmd := exec.Command("sh", "/home/system/components/updater/run.sh", "--check")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	scanner := bufio.NewScanner(stdout)
+	err = cmd.Start()
+	if err != nil {
+		panic(err)
+	}
+	for scanner.Scan() {
+		// fmt.Println(scanner.Text())
+		text := scanner.Text()
+		fmt.Println(text)
+	}
+	if scanner.Err() != nil {
+		cmd.Process.Kill()
+		cmd.Wait()
+		fmt.Println("Error running updates check.")
+		utils.WriteOption("SYSTEM_UPDATES", "[]")
+		return
+	}
+
+	// Read targets.env file into JSON list structure
+	targets := []string{}
+	targetsFile, err := os.Open("/home/system/components/updater/targets.env")
+	if err != nil {
+		fmt.Println("No targets.env file found. Skipping.")
+		utils.WriteOption("SYSTEM_UPDATES", "[]")
+		return
+	}
+	defer targetsFile.Close()
+	scanner = bufio.NewScanner(targetsFile)
+	for scanner.Scan() {
+		text := scanner.Text()
+		// text line should look like: {"target": "<target>", "version": "<version>"}
+		target := strings.Split(text, "=")
+		newText := "{\"target\": \"" + strings.Replace(target[0], "_VERSION", "", -1) + "\", \"version\": \"" + target[1] + "\"}"
+		targets = append(targets, newText)
+	}
+	if scanner.Err() != nil {
+		fmt.Println("Error reading update targets file.")
+		utils.WriteOption("SYSTEM_UPDATES", "[]")
+		return
+	}
+
+	// convert targets to string
+	targetsString := strings.Join(targets, ",")
+	targetsString = "[" + targetsString + "]"
+
+	fmt.Println(targetsString)
+
+	// Write option with targets
+	utils.WriteOption("SYSTEM_UPDATES", targetsString)
+}
+
+func ApplyUpdates() {
+	fmt.Println("Applying Edgebox System Updates.")
+
+	utils.WriteOption("UPDATING_SYSTEM", "true")
+	
+	// Configure the service and start it
+	cmd := exec.Command("sh", "/home/system/components/updater/run.sh", "--update")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	scanner := bufio.NewScanner(stdout)
+	err = cmd.Start()
+	if err != nil {
+		panic(err)
+	}
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+		text := scanner.Text()
+		fmt.Println(text)
+	}
+	if scanner.Err() != nil {
+		cmd.Process.Kill()
+		cmd.Wait()
+		panic(scanner.Err())
+	}
+
+	// If the system did not yet restart, set updating system to false
+	utils.WriteOption("UPDATING_SYSTEM", "false")
+}
+
