@@ -146,6 +146,33 @@ func GetNextTask() Task {
 
 }
 
+// GetExecutingTasks : Performs a MySQL query over the device's Edgebox API to obtain all tasks that are currently executing
+func GetExecutingTasks() []Task {
+	// Will try to connect to API database, which should be running locally under WS.
+	db, err := sql.Open("sqlite3", utils.GetSQLiteDbConnectionDetails())
+	if err != nil {
+		panic(err.Error())
+	}
+	results, err := db.Query("SELECT id, task, args, status, result, created, updated FROM task WHERE status = 1;")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	var tasks []Task
+	for results.Next() {
+		// for each row, scan the result into our task composite object
+		var task Task
+		err = results.Scan(&task.ID, &task.Task, &task.Args, &task.Status, &task.Result, &task.Created, &task.Updated)
+		if err != nil {
+			panic(err.Error()) // proper error handling instead of panic in your app
+		}
+		tasks = append(tasks, task)
+	}
+	results.Close()
+	db.Close()
+	return tasks
+}
+
 // ExecuteTask : Performs execution of the given task, updating the task status as it goes, and publishing the task result
 func ExecuteTask(task Task) Task {
 
@@ -387,6 +414,25 @@ func ExecuteTask(task Task) Task {
 			taskResult := taskDisablePublicDashboard()
 			task.Result = sql.NullString{String: taskResult, Valid: true}
 
+		case "check_updates":
+			log.Println("Checking for updates...")
+			taskResult := taskCheckSystemUpdates()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
+		case "apply_updates":
+
+			log.Println("Updating Edgebox System...")
+			is_updating := utils.ReadOption("UPDATING_SYSTEM")
+			if is_updating == "true"  {
+				log.Println("Edgebox update was running... Probably system restarted. Finishing update...")
+				utils.WriteOption("UPDATING_SYSTEM", "false")
+				task.Result = sql.NullString{String: "{result: true}", Valid: true}
+			} else {
+				log.Println("Updating Edgebox System...")
+				taskResult := taskUpdateSystem()
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
 		}
 
 	}
@@ -407,6 +453,7 @@ func ExecuteTask(task Task) Task {
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+
 	} else {
 		fmt.Println("Error executing task with result: " + task.Result.String)
 		_, err = statement.Exec(STATUS_ERROR, "Error", formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
@@ -460,6 +507,9 @@ func ExecuteSchedules(tick int) {
 		taskStartWs()
 		log.Println(taskGetEdgeApps())
 		taskUpdateSystemLoggerServices()
+		taskRecoverFromUpdate()
+		taskCheckSystemUpdates()
+		
 	}
 
 	if tick%5 == 0 {
@@ -506,6 +556,7 @@ func ExecuteSchedules(tick int) {
 
 	if tick%3600 == 0 {
 		// Executing every 3600 ticks (1 hour)
+		taskCheckSystemUpdates()
 	}
 
 	if tick%86400 == 0 {
@@ -1228,6 +1279,38 @@ func taskDisablePublicDashboard() string {
 		return "{result: true}"
 	}
 	return "{result: false}"
+}
+
+func taskCheckSystemUpdates() string {
+	fmt.Println("Executing taskCheckSystemUpdates")
+	system.CheckUpdates()
+	return "{result: true}"
+}
+
+func taskUpdateSystem() string {
+	fmt.Println("Executing taskUpdateSystem")
+	system.ApplyUpdates()
+	return "{result: true}"
+}
+
+func taskRecoverFromUpdate() string {
+	fmt.Println("Executing taskRecoverFromUpdate")
+	executing_tasks := GetExecutingTasks()
+	// Filter out the task with task value "update_system"
+	filteredTasks := []Task{}
+	for _, task := range executing_tasks {
+		if task.Task != "update_system" {
+			filteredTasks = append(filteredTasks, task)
+		}
+	}
+	
+	// If tasks is not empty, Get the last task
+	if len(filteredTasks) > 0 {
+		lastTask := filteredTasks[len(filteredTasks)-1]
+		ExecuteTask(lastTask)
+	}
+
+	return "{result: true}"
 }
 
 func taskSetReleaseVersion() string {
