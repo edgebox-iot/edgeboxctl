@@ -11,6 +11,7 @@ import (
 
 	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
+	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 )
 
 // EdgeApp : Struct representing an EdgeApp in the system
@@ -18,6 +19,7 @@ type EdgeApp struct {
 	ID                 string           `json:"id"`
 	Name               string           `json:"name"`
 	Description        string           `json:"description"`
+	Experimental	   bool             `json:"experimental"`
 	Status             EdgeAppStatus    `json:"status"`
 	Services           []EdgeAppService `json:"services"`
 	InternetAccessible bool             `json:"internet_accessible"`
@@ -86,6 +88,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 
 		edgeAppName := ID
 		edgeAppDescription := ""
+		edgeAppExperimental := false
 		edgeAppOptions := []EdgeAppOption{}
 
 		edgeAppEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + ID + envFilename)
@@ -98,6 +101,9 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 			}
 			if edgeAppEnv["EDGEAPP_DESCRIPTION"] != "" {
 				edgeAppDescription = edgeAppEnv["EDGEAPP_DESCRIPTION"]
+			}
+			if edgeAppEnv["EDGEAPP_EXPERIMENTAL"] == "true" {
+				edgeAppExperimental = true
 			}
 		}
 
@@ -231,6 +237,7 @@ func GetEdgeApp(ID string) MaybeEdgeApp {
 				ID:                 ID,
 				Name:               edgeAppName,
 				Description:        edgeAppDescription,
+				Experimental:       edgeAppExperimental,
 				Status:             GetEdgeAppStatus(ID),
 				Services:           GetEdgeAppServices(ID),
 				InternetAccessible: edgeAppInternetAccessible,
@@ -263,22 +270,54 @@ func IsEdgeAppInstalled(ID string) bool {
 
 }
 
+func writeAppRunnableFiles(ID string) bool {
+	edgeAppPath := utils.GetPath(utils.EdgeAppsPath)
+	_, err := os.Stat(edgeAppPath + ID + runnableFilename)
+	if os.IsNotExist(err) {
+		_, err := os.Create(edgeAppPath + ID + runnableFilename)
+		if err != nil {
+			log.Fatal("Runnable file for EdgeApp could not be created!")
+			return false
+		}
+
+		// Check the block default apps option
+        blockDefaultAppsOption := utils.ReadOption("DASHBOARD_BLOCK_DEFAULT_APPS_PUBLIC_ACCESS")
+        if blockDefaultAppsOption != "yes" {
+            // Create myedgeapp.env file with default network URL
+            envFilePath := edgeAppPath + ID + myEdgeAppServiceEnvFilename
+            
+			var networkURL string
+			domainName := utils.ReadOption("DOMAIN_NAME")
+
+			if domainName != "" {
+				networkURL = ID + "." + domainName
+			} else if diagnostics.GetReleaseVersion() == diagnostics.CLOUD_VERSION {
+				cluster := utils.ReadOption("CLUSTER") 
+				username := utils.ReadOption("USERNAME")
+				if cluster != "" && username != "" {
+					networkURL = username + "-" + ID + "." + cluster
+				}
+			} else {
+				networkURL = ID + "." + system.GetHostname() + ".local" // default 
+			}
+			
+            env, _ := godotenv.Unmarshal("INTERNET_URL=" + networkURL)
+            err = godotenv.Write(env, envFilePath)
+            if err != nil {
+                log.Printf("Error creating myedgeapp.env file: %s", err)
+                // result = false
+            }
+        }
+	}
+	return true
+}
+
 func SetEdgeAppInstalled(ID string) bool {
 
 	result := true
-	edgeAppPath := utils.GetPath(utils.EdgeAppsPath)
 
-	_, err := os.Stat(edgeAppPath + ID + runnableFilename)
-	if os.IsNotExist(err) {
-
-		_, err := os.Create(edgeAppPath + ID + runnableFilename)
-		result = true
-
-		if err != nil {
-			log.Fatal("Runnable file for EdgeApp could not be created!")
-			result = false
-		}
-
+	if writeAppRunnableFiles(ID) {
+		
 		buildFrameworkContainers()
 
 	} else {
@@ -291,6 +330,21 @@ func SetEdgeAppInstalled(ID string) bool {
 	return result
 
 }
+
+func SetEdgeAppBulkInstalled(IDs []string) bool {
+
+	result := true
+
+	for _, ID := range IDs {
+		writeAppRunnableFiles(ID)
+	}
+
+	buildFrameworkContainers()
+
+	return result
+
+}
+
 
 func SetEdgeAppNotInstalled(ID string) bool {
 

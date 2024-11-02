@@ -56,6 +56,10 @@ type taskInstallEdgeAppArgs struct {
 	ID string `json:"id"`
 }
 
+type taskInstallBulkEdgeAppsArgs struct {
+	IDS []string `json:"ids"`
+}
+
 type taskRemoveEdgeAppArgs struct {
 	ID string `json:"id"`
 }
@@ -296,6 +300,18 @@ func ExecuteTask(task Task) Task {
 				log.Printf("Error reading arguments of install_edgeapp task: %s", err)
 			} else {
 				taskResult := taskInstallEdgeApp(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "install_bulk_edgeapps":
+
+			log.Println("Installing Bulk EdgeApps...")
+			var args taskInstallBulkEdgeAppsArgs
+			err := json.Unmarshal([]byte(task.Args.String), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of install_bulk_edgeapps task: %s", err)
+			} else {
+				taskResult := taskInstallBulkEdgeApps(args)
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
@@ -975,12 +991,19 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 }
 
 func taskStartTunnel() string {
-	fmt.Println("Executing taskStartTunnel")
-	system.StartService("cloudflared")
-	domainName := utils.ReadOption("DOMAIN_NAME")
-	status := "{\"status\": \"connected\", \"domain\": \"" + domainName + "\"}"
-	utils.WriteOption("TUNNEL_STATUS", status)
-	return "{\"status\": \"ok\"}"
+    fmt.Println("Executing taskStartTunnel")
+    
+    // Read tunnel status to check if cloudflare is configured
+    tunnelStatus := utils.ReadOption("TUNNEL_STATUS")
+	if tunnelStatus != "" {
+		// Only start cloudflared if we have a tunnel configured
+        system.StartService("cloudflared")
+        domainName := utils.ReadOption("DOMAIN_NAME")
+        status := "{\"status\": \"connected\", \"domain\": \"" + domainName + "\"}"
+        utils.WriteOption("TUNNEL_STATUS", status)
+	}
+    
+    return "{\"status\": \"ok\"}"
 }
 
 func taskStopTunnel() string {
@@ -1082,6 +1105,16 @@ func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
 
 	taskGetEdgeApps()
 	return string(resultJSON)
+}
+
+func taskInstallBulkEdgeApps(args taskInstallBulkEdgeAppsArgs) string {
+	fmt.Println("Executing taskInstallBulkEdgeApps for " + strings.Join(args.IDS, ", "))
+
+	// args.Apps is a list of edgeapp ids
+	edgeapps.SetEdgeAppBulkInstalled(args.IDS)
+
+	taskGetEdgeApps()
+	return "{\"status\": \"ok\"}"
 }
 
 func taskRemoveEdgeApp(args taskRemoveEdgeAppArgs) string {
@@ -1290,6 +1323,7 @@ func taskCheckSystemUpdates() string {
 func taskUpdateSystem() string {
 	fmt.Println("Executing taskUpdateSystem")
 	system.ApplyUpdates()
+	utils.WriteOption("LAST_UPDATE", strconv.FormatInt(time.Now().Unix(), 10))
 	return "{result: true}"
 }
 

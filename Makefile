@@ -69,5 +69,8 @@ start:
 stop:
 	systemctl stop edgeboxctl
 
+status:
+	systemctl status edgeboxctl
+
 log: start
 	journalctl -fu edgeboxctl
