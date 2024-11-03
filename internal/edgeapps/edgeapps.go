@@ -71,6 +71,7 @@ const optionsEnvFilename = "/edgeapp.env"
 const authEnvFilename = "/auth.env"
 const runnableFilename = "/.run"
 const appdataFoldername = "/appdata"
+const postInstallFilename = "/edgebox-postinstall.done"
 const myEdgeAppServiceEnvFilename = "/myedgeapp.env"
 const defaultContainerOperationSleepTime time.Duration = time.Second * 10
 
@@ -379,6 +380,12 @@ func SetEdgeAppNotInstalled(ID string) bool {
 	}
 
 	err = os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + optionsEnvFilename)
+	if err != nil {
+		result = false
+		log.Println(err)
+	}
+
+	err = os.Remove(utils.GetPath(utils.EdgeAppsPath) + ID + postInstallFilename)
 	if err != nil {
 		result = false
 		log.Println(err)
