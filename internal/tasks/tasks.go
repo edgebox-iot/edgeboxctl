@@ -1077,7 +1077,9 @@ func taskStartShell(args taskStartShellArgs) string {
 				utils.WriteOption("SHELL_STATUS", "not_running")
 				break
 			}
-			fmt.Println("Active Shell Timeout is " + fmt.Sprint(timeout) + " seconds")
+			if timeout%10 == 0 {
+				fmt.Println("Active Shell Timeout is " + fmt.Sprint(timeout) + " seconds")
+			}
 			time.Sleep(1 * time.Second)
 		}
 	}()
