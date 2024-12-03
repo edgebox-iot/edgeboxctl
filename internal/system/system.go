@@ -548,3 +548,53 @@ func FetchBrowserDevPasswordFromFile() (string, error) {
     return "", errors.New("password key not found")
 }
 
+func SetBrowserDevPasswordFile(password string) error {
+	// Get current password from file
+	currentPassword, err := FetchBrowserDevPasswordFromFile()
+	if err != nil {
+		fmt.Println("Error fetching current password from file.")
+		return err
+	}
+
+	// Write the new password on the file using ReplaceTextInFile
+	err = ReplaceTextInFile(utils.GetPath(utils.BrowserDevPasswordFileLocation), currentPassword, password)
+	if err != nil {
+		fmt.Println("Error writing new password to file.")
+		return err
+	}
+
+	return nil
+}
+
+func ReplaceTextInFile(filePath string, oldText string, newText string) error {
+	// Open the file for reading
+	file, err := os.OpenFile(filePath, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+
+	// Read the file contents
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	// Close the file
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
+	// Replace the text in the file
+	newData := strings.Replace(string(data), oldText, newText, -1)
+
+	// Write the new data back to the file
+	err = ioutil.WriteFile(filePath, []byte(newData), 0644)
+	if err != nil {
+		return err
+	}
+	
+	return nil
+}
+		
+
