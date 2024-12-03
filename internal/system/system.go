@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"io"
+	"errors"
 	"os/exec"
 	"bufio"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/shirou/gopsutil/host"
+	"github.com/go-yaml/yaml"
 )
 
 type cloudflaredTunnelJson struct {
@@ -514,5 +516,35 @@ func ApplyUpdates() {
 
 	// If the system did not yet restart, set updating system to false
 	utils.WriteOption("UPDATING_SYSTEM", "false")
+}
+
+func FetchBrowserDevPasswordFromFile() (string, error) {
+	fmt.Println("Executing FetchBrowserDevPasswordFromFile")
+
+	// Read the "password" entry on the yaml file
+	// Read the yaml file in system.GetPath(BrowserDevPasswordFileLocation)
+	yamlFile, err := ioutil.ReadFile(utils.GetPath(utils.BrowserDevPasswordFileLocation))
+	if err != nil {
+		return "", err
+	}
+
+	// Parse the yaml file and get the "password" entry
+	var yamlFileMap yaml.MapSlice
+	err = yaml.Unmarshal(yamlFile, &yamlFileMap)
+	if err != nil {
+		return "", err
+	}
+
+	for _, item := range yamlFileMap {
+        key, value := item.Key, item.Value
+        if key == "password" {
+            if pwString, ok := value.(string); ok {
+                return pwString, nil
+            } else {
+                return "", errors.New("password value is not a string")
+            }
+        }
+    }
+    return "", errors.New("password key not found")
 }
 

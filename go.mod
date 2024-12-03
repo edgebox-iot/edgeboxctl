@@ -8,6 +8,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
+	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/mattn/go-sqlite3 v1.14.7 // indirect
 	github.com/shirou/gopsutil v3.21.4+incompatible // indirect

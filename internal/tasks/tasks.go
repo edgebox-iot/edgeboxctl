@@ -291,6 +291,11 @@ func ExecuteTask(task Task) Task {
 			taskResult := taskStopShell()
 			task.Result = sql.NullString{String: taskResult, Valid: true}
 
+		case "activate_browser_dev":
+			log.Println("Activating Browser Dev Environment")
+			taskResult := taskActivateBrowserDev()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
 		case "install_edgeapp":
 
 			log.Println("Installing EdgeApp...")
@@ -494,6 +499,8 @@ func ExecuteTask(task Task) Task {
 func ExecuteSchedules(tick int) {
 
 	if tick == 1 {
+
+		resultPassword := taskGetBrowserDevPassword()
 
 		ip := taskGetSystemIP()
 		log.Println("System IP is: " + ip)
@@ -1098,6 +1105,46 @@ func taskStopShell() string {
 	return "{\"status\": \"ok\"}"
 
 }
+
+func taskActivateBrowserDev() string {
+	fmt.Println("Executing taskActivateBrowserDev")
+	wsPath := utils.GetPath(utils.WsPath)
+
+	// start the code-server process
+	// utils.Exec(wsPath, "killall", []string{"sshx"})
+	utils.Exec(wsPath, "killall", []string{"code-server"})
+
+	utils.WriteOption("BROWSERDEV_STATUS", "running")
+
+	return "{\"status\": \"ok\"}"
+}
+
+func taskDeactivateBrowserDev() string {
+	fmt.Println("Executing taskDeactivateBrowserDev")
+	utils.WriteOption("BROWSERDEV_STATUS", "not_running")
+	return "{\"status\": \"ok\"}"
+}
+
+func taskGetBrowserDevPassword() string {
+	fmt.Println("Executing taskGetBrowserDevPassword")
+	password := utils.ReadOption("BROWSERDEV_PASSWORD")
+	if password == "" {
+		password, err := system.FetchBrowserDevPasswordFromFile()
+		if err == nil {
+			utils.WriteOption("BROWSERDEV_PASSWORD", password)
+		} else {
+			fmt.Println("Error fetching browser dev password from file: " + err.Error())
+		}
+	}
+	return password
+}
+
+// func taskSetBrowserDevPassword(args taskSetBrowserDevPasswordArgs) string {
+// 	fmt.Println("Executing taskSetBrowserDevPassword")
+// 	system.SetBrowserDevPassword(args.Password)
+// 	utils.WriteOption("BROWSERDEV_PASSWORD", args.Password)
+// 	return "{\"status\": \"ok\"}"
+// }
 
 func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {
 	fmt.Println("Executing taskInstallEdgeApp for " + args.ID)
