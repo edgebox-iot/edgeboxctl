@@ -113,6 +113,7 @@ const EdgeAppsBackupPath string = "edgeAppsBackupPath"
 const WsPath string = "wsPath"
 const LoggerPath string = "loggerPath"
 const BrowserDevPasswordFileLocation string = "browserDevPasswordFileLocation"
+const BrowserDevProxyPath string = "browserDevProxyPath"
 
 
 // GetPath : Returns either the hardcoded path, or a overwritten value via .env file at project root. Register paths here for seamless working code between dev and prod environments ;)
@@ -195,6 +196,13 @@ func GetPath(pathKey string) string {
 			targetPath = env["BROWSERDEV_PASSWORD_FILE_LOCATION"]
 		} else {
 			targetPath = "/root/.config/code-server/config.yaml"
+		}
+
+	case BrowserDevProxyPath:
+		if env["BROWSERDEV_PROXY_PATH"] != "" {
+			targetPath = env["BROWSERDEV_PROXY_PATH"]
+		} else {
+			targetPath = "/home/system/components/dev/"
 		}
 
 	default:
