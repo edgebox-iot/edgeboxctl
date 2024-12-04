@@ -530,6 +530,7 @@ func ExecuteSchedules(tick int) {
 
 		log.Println("Fetching Browser Dev Environment Information")
 		taskGetBrowserDevPassword()
+		taskGetBrowserDevStatus()
 		
 		ip := taskGetSystemIP()
 		log.Println("System IP is: " + ip)
@@ -608,7 +609,9 @@ func ExecuteSchedules(tick int) {
 
 	if tick%3600 == 0 {
 		// Executing every 3600 ticks (1 hour)
+		taskGetBrowserDevStatus()
 		taskCheckSystemUpdates()
+
 	}
 
 	if tick%86400 == 0 {
@@ -1133,6 +1136,26 @@ func taskStopShell() string {
 
 	return "{\"status\": \"ok\"}"
 
+}
+
+func taskGetBrowserDevStatus() string {
+	fmt.Println("Executing taskGetBrowserDevStatus")
+
+	// Read status from systemctl status code-server@root
+	browserDevStatus := utils.Exec(
+		utils.GetPath(utils.WsPath),
+		"sh",
+		[]string{"-c", "systemctl --quiet is-active code-server@root && echo 'active' || echo 'inactive'"},
+	)	
+	if browserDevStatus != "" {
+		fmt.Println("Browser Dev Environment is running")
+		utils.WriteOption("BROWSERDEV_STATUS", "running")
+		return "{\"status\": \"running\"}"
+	} else {
+		fmt.Println("Browser Dev Environment is not running")
+		utils.WriteOption("BROWSERDEV_STATUS", "not_running")
+		return "{\"status\": \"not_running\"}"
+	}
 }
 
 func taskActivateBrowserDev() string {
