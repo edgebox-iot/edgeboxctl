@@ -10,13 +10,11 @@ GOARCH := $(shell go env GOARCH)
 
 
 build-all:
-	@echo "\n🏗️ Building all architectures and release modes"
+	@echo "\n🏗️ Building all architectures for ${RELEASE} mode"
 	@echo "🟡 This will build all supported architectures and release combinations. It can take a while...\n"
 
-	GOARCH=amd64 make build
-	GOARCH=arm make build
-	RELEASE=prod make build
-	RELEASE=cloud make build 
+	GOOS=linux GOARCH=amd64 make build
+	GOOS=linux GOARCH=arm make build
 
 	@echo "\n🟢 All builds completed and available at ./bin/ \n"
 
@@ -61,6 +59,10 @@ test:
 
 test-with-coverage:
 	go test -tags=unit -timeout=600s -v ./... -coverprofile=coverage.out
+
+run:
+	@echo "\n🚀 Running edgeboxctl\n"
+	./bin/edgeboxctl-${GOOS}-${GOARCH}
 
 install:
 	@echo "📦 Installing edgeboxctl service (${RELEASE}) for ${GOOS} (${GOARCH})\n"
