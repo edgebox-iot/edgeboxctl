@@ -1147,7 +1147,7 @@ func taskGetBrowserDevStatus() string {
 		"sh",
 		[]string{"-c", "systemctl --quiet is-active code-server@root && echo 'active' || echo 'inactive'"},
 	)	
-	if browserDevStatus != "" {
+	if browserDevStatus == "active" {
 		fmt.Println("Browser Dev Environment is running")
 		utils.WriteOption("BROWSERDEV_STATUS", "running")
 		return "{\"status\": \"running\"}"
