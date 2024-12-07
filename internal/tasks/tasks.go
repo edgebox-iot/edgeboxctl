@@ -108,6 +108,10 @@ type taskStartShellArgs struct {
 	Timeout int `json:"timeout"`
 }
 
+type taskSetBrowserDevPasswordArgs struct {
+	Password string `json:"password"`
+}
+
 
 const STATUS_CREATED int = 0
 const STATUS_EXECUTING int = 1
@@ -291,6 +295,11 @@ func ExecuteTask(task Task) Task {
 			taskResult := taskStopShell()
 			task.Result = sql.NullString{String: taskResult, Valid: true}
 
+		case "activate_browser_dev":
+			log.Println("Activating Browser Dev Environment")
+			taskResult := taskActivateBrowserDev()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
 		case "install_edgeapp":
 
 			log.Println("Installing EdgeApp...")
@@ -449,6 +458,30 @@ func ExecuteTask(task Task) Task {
 				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
+		case "set_browserdev_password":
+
+			log.Println("Setting BrowserDev Password...")
+			var args taskSetBrowserDevPasswordArgs
+			err := json.Unmarshal([]byte(task.Args.String), &args)
+			if err != nil {
+				log.Printf("Error reading arguments of set_browserdev_password task: %s", err)
+			} else {
+				taskResult := taskSetBrowserDevPassword(args)
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "activate_browserdev":
+
+			log.Println("Activating BrowserDev Environment...")
+			taskResult := taskActivateBrowserDev()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
+		case "deactivate_browserdev":
+
+			log.Println("Deactivating BrowserDev Environment...")
+			taskResult := taskDeactivateBrowserDev()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
 		}
 
 	}
@@ -495,6 +528,10 @@ func ExecuteSchedules(tick int) {
 
 	if tick == 1 {
 
+		log.Println("Fetching Browser Dev Environment Information")
+		taskGetBrowserDevPassword()
+		taskGetBrowserDevStatus()
+		
 		ip := taskGetSystemIP()
 		log.Println("System IP is: " + ip)
 
@@ -572,7 +609,9 @@ func ExecuteSchedules(tick int) {
 
 	if tick%3600 == 0 {
 		// Executing every 3600 ticks (1 hour)
+		taskGetBrowserDevStatus()
 		taskCheckSystemUpdates()
+
 	}
 
 	if tick%86400 == 0 {
@@ -1097,6 +1136,84 @@ func taskStopShell() string {
 
 	return "{\"status\": \"ok\"}"
 
+}
+
+func taskGetBrowserDevStatus() string {
+	fmt.Println("Executing taskGetBrowserDevStatus")
+
+	// Read status from systemctl status code-server@root
+	browserDevStatus := utils.Exec(
+		utils.GetPath(utils.WsPath),
+		"sh",
+		[]string{"-c", "systemctl --quiet is-active code-server@root && echo 'active' || echo 'inactive'"},
+	)	
+	if browserDevStatus == "active" {
+		fmt.Println("Browser Dev Environment is running")
+		utils.WriteOption("BROWSERDEV_STATUS", "running")
+		return "{\"status\": \"running\"}"
+	} else {
+		fmt.Println("Browser Dev Environment is not running")
+		utils.WriteOption("BROWSERDEV_STATUS", "not_running")
+		return "{\"status\": \"not_running\"}"
+	}
+}
+
+func taskActivateBrowserDev() string {
+	fmt.Println("Executing taskActivateBrowserDev")
+	wsPath := utils.GetPath(utils.WsPath)
+
+	// Start the service
+	utils.Exec(wsPath, "systemctl", []string{"start", "code-server@root"})
+	// Write run file to /home/system/components/dev/.run
+	utils.Exec(wsPath, "touch", []string{utils.GetPath(utils.BrowserDevProxyPath) + ".run"})
+	// Rebuild WS (necessary to start the proxy)
+	system.StartWs()
+	// Write control option for API
+	utils.WriteOption("BROWSERDEV_STATUS", "running")
+	return "{\"status\": \"ok\"}"
+}
+
+func taskDeactivateBrowserDev() string {
+	fmt.Println("Executing taskDeactivateBrowserDev")
+	wsPath := utils.GetPath(utils.WsPath)
+
+	// Remove the run file
+	os.Remove(utils.GetPath(utils.BrowserDevProxyPath) + ".run")
+	system.StartWs()
+	
+	utils.Exec(wsPath, "systemctl", []string{"stop", "code-server@root"})
+	utils.WriteOption("BROWSERDEV_STATUS", "not_running")
+
+	return "{\"status\": \"ok\"}"
+}
+
+func taskGetBrowserDevPassword() string {
+	fmt.Println("Executing taskGetBrowserDevPassword")
+	password := utils.ReadOption("BROWSERDEV_PASSWORD")
+	if password == "" {
+		password, err := system.FetchBrowserDevPasswordFromFile()
+		if err == nil {
+			utils.WriteOption("BROWSERDEV_PASSWORD", password)
+		} else {
+			fmt.Println("Error fetching browser dev password from file: " + err.Error())
+		}
+	}
+	return password
+}
+
+func taskSetBrowserDevPassword(args taskSetBrowserDevPasswordArgs) string {
+	fmt.Println("Executing taskSetBrowserDevPassword")
+	wsPath := utils.GetPath(utils.WsPath)
+
+	system.SetBrowserDevPasswordFile(args.Password)
+	utils.WriteOption("BROWSERDEV_PASSWORD", args.Password)
+
+	// Check if BROWSERDEV_STATUS is "running", if so, restart the service
+	if utils.ReadOption("BROWSERDEV_STATUS") == "running" {
+		utils.Exec(wsPath, "systemctl", []string{"restart", "code-server@root"})
+	}
+
+	return "{\"status\": \"ok\"}"
 }
 
 func taskInstallEdgeApp(args taskInstallEdgeAppArgs) string {

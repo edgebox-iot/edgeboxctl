@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"io"
+	"errors"
 	"os/exec"
 	"bufio"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/shirou/gopsutil/host"
+	"github.com/go-yaml/yaml"
 )
 
 type cloudflaredTunnelJson struct {
@@ -515,4 +517,84 @@ func ApplyUpdates() {
 	// If the system did not yet restart, set updating system to false
 	utils.WriteOption("UPDATING_SYSTEM", "false")
 }
+
+func FetchBrowserDevPasswordFromFile() (string, error) {
+	fmt.Println("Executing FetchBrowserDevPasswordFromFile")
+
+	// Read the "password" entry on the yaml file
+	// Read the yaml file in system.GetPath(BrowserDevPasswordFileLocation)
+	yamlFile, err := ioutil.ReadFile(utils.GetPath(utils.BrowserDevPasswordFileLocation))
+	if err != nil {
+		return "", err
+	}
+
+	// Parse the yaml file and get the "password" entry
+	var yamlFileMap yaml.MapSlice
+	err = yaml.Unmarshal(yamlFile, &yamlFileMap)
+	if err != nil {
+		return "", err
+	}
+
+	for _, item := range yamlFileMap {
+        key, value := item.Key, item.Value
+        if key == "password" {
+            if pwString, ok := value.(string); ok {
+                return pwString, nil
+            } else {
+                return "", errors.New("password value is not a string")
+            }
+        }
+    }
+    return "", errors.New("password key not found")
+}
+
+func SetBrowserDevPasswordFile(password string) error {
+	// Get current password from file
+	currentPassword, err := FetchBrowserDevPasswordFromFile()
+	if err != nil {
+		fmt.Println("Error fetching current password from file.")
+		return err
+	}
+
+	// Write the new password on the file using ReplaceTextInFile
+	err = ReplaceTextInFile(utils.GetPath(utils.BrowserDevPasswordFileLocation), currentPassword, password)
+	if err != nil {
+		fmt.Println("Error writing new password to file.")
+		return err
+	}
+
+	return nil
+}
+
+func ReplaceTextInFile(filePath string, oldText string, newText string) error {
+	// Open the file for reading
+	file, err := os.OpenFile(filePath, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+
+	// Read the file contents
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	// Close the file
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
+	// Replace the text in the file
+	newData := strings.Replace(string(data), oldText, newText, -1)
+
+	// Write the new data back to the file
+	err = ioutil.WriteFile(filePath, []byte(newData), 0644)
+	if err != nil {
+		return err
+	}
+	
+	return nil
+}
+		
 
