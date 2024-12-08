@@ -111,6 +111,7 @@ const ApiPath string = "apiPath"
 const EdgeAppsPath string = "edgeAppsPath"
 const EdgeAppsBackupPath string = "edgeAppsBackupPath"
 const WsPath string = "wsPath"
+const BrowserDevPath string = "browserDevPath"
 const LoggerPath string = "loggerPath"
 const BrowserDevPasswordFileLocation string = "browserDevPasswordFileLocation"
 const BrowserDevProxyPath string = "browserDevProxyPath"
@@ -174,6 +175,14 @@ func GetPath(pathKey string) string {
 			targetPath = env["WS_PATH"]
 		} else {
 			targetPath = "/home/system/components/ws/"
+		}
+
+	case BrowserDevPath:
+
+		if env["BROWSERDEV_PATH"] != "" {
+			targetPath = env["BROWSERDEV_PATH"]
+		} else {
+			targetPath = "/home/system/components/dev/"
 		}
 
 	case LoggerPath:

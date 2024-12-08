@@ -1169,7 +1169,7 @@ func taskGetBrowserDevStatus() string {
 
 func taskGetBrowserDevUrl() string {
 	url := ""
-	myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + "dev/myedgeapp.env")
+	myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath(utils.BrowserDevPath) + "myedgeapp.env")
 	if err != nil {
 		log.Println("No myedge.app environment file found. Status is Network-Only")
 		url = "http://dev." + system.GetHostname() + ".local"
