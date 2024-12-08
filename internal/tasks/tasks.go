@@ -18,6 +18,8 @@ import (
 	"github.com/edgebox-iot/edgeboxctl/internal/system"
 	"github.com/edgebox-iot/edgeboxctl/internal/utils"
 
+	"github.com/joho/godotenv"
+
 	_ "github.com/go-sql-driver/mysql" // Mysql Driver
 	_ "github.com/mattn/go-sqlite3"    // SQlite Driver
 )
@@ -531,6 +533,8 @@ func ExecuteSchedules(tick int) {
 		log.Println("Fetching Browser Dev Environment Information")
 		taskGetBrowserDevPassword()
 		taskGetBrowserDevStatus()
+
+		taskCheckSystemUpdates()
 		
 		ip := taskGetSystemIP()
 		log.Println("System IP is: " + ip)
@@ -560,15 +564,17 @@ func ExecuteSchedules(tick int) {
 		taskStartWs()
 		log.Println(taskGetEdgeApps())
 		taskUpdateSystemLoggerServices()
-		taskRecoverFromUpdate()
-		taskCheckSystemUpdates()
-		
+		taskRecoverFromUpdate()		
 	}
 
 	if tick%5 == 0 {
 		// Executing every 5 ticks
 		taskGetSystemUptime()
 		log.Println(taskGetStorageDevices())
+	}
+
+	if tick%15 == 0 {
+		taskGetBrowserDevStatus()
 	}
 
 	if tick%30 == 0 {
@@ -1150,12 +1156,33 @@ func taskGetBrowserDevStatus() string {
 	if browserDevStatus == "active" {
 		fmt.Println("Browser Dev Environment is running")
 		utils.WriteOption("BROWSERDEV_STATUS", "running")
+		taskGetBrowserDevUrl()
+
 		return "{\"status\": \"running\"}"
+
 	} else {
 		fmt.Println("Browser Dev Environment is not running")
 		utils.WriteOption("BROWSERDEV_STATUS", "not_running")
 		return "{\"status\": \"not_running\"}"
 	}
+}
+
+func taskGetBrowserDevUrl() string {
+	url := ""
+	myEdgeAppServiceEnv, err := godotenv.Read(utils.GetPath(utils.EdgeAppsPath) + "dev/myedgeapp.env")
+	if err != nil {
+		log.Println("No myedge.app environment file found. Status is Network-Only")
+		url = "http://dev." + system.GetHostname() + ".local"
+	} else {
+		if myEdgeAppServiceEnv["INTERNET_URL"] != "" {
+			url = "https://" + myEdgeAppServiceEnv["INTERNET_URL"]
+		}
+	}
+
+	fmt.Println("Browser Dev Url: " + url)
+
+	utils.WriteOption("BROWSERDEV_URL", url)
+	return url
 }
 
 func taskActivateBrowserDev() string {
