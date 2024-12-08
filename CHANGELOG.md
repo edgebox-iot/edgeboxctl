@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.2] - 08-12-2024
+
+* Fix to Browser Dev feature:
+    * Checking browser dev url when internet_accessible was checking the incorrect path. This is now fixed.
+
 ## [1.3.1] - 08-12-2024
 
 * Fixes to Browser Dev feature:
