@@ -1170,6 +1170,10 @@ func taskActivateBrowserDev() string {
 	system.StartWs()
 	// Write control option for API
 	utils.WriteOption("BROWSERDEV_STATUS", "running")
+
+	// Write and refresh the dev environment password option
+	taskGetBrowserDevPassword()
+
 	return "{\"status\": \"ok\"}"
 }
 
@@ -1189,15 +1193,14 @@ func taskDeactivateBrowserDev() string {
 
 func taskGetBrowserDevPassword() string {
 	fmt.Println("Executing taskGetBrowserDevPassword")
-	password := utils.ReadOption("BROWSERDEV_PASSWORD")
-	if password == "" {
-		password, err := system.FetchBrowserDevPasswordFromFile()
-		if err == nil {
-			utils.WriteOption("BROWSERDEV_PASSWORD", password)
-		} else {
-			fmt.Println("Error fetching browser dev password from file: " + err.Error())
-		}
+
+	password, err := system.FetchBrowserDevPasswordFromFile()
+	if err == nil {
+		utils.WriteOption("BROWSERDEV_PASSWORD", password)
+	} else {
+		fmt.Println("Error fetching browser dev password from file: " + err.Error())
 	}
+
 	return password
 }
 
