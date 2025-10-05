@@ -59,9 +59,11 @@ To get a local copy up and running follow these simple steps.
 If you're running for development purposes, a docker container suffices, so make sure you have:
 
 * docker
-* docker compose
+* docker compose (docker-compose-v2 package)
 
 Check the following links for more info on [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/).
+
+**Note:** If you don't have `docker compose` available, install it with: `sudo apt-get install docker-compose-v2`
 
 Aditionally, `edgeboxctl` needs the following bash commands available wherever it runs:
 
@@ -79,10 +81,10 @@ Aditionally, `edgeboxctl` needs the following bash commands available wherever i
 ```sh
 git clone https://github.com/edgebox-iot/edgeboxctl.git
 ```
-2. Run Docker-Compose
-```sh
-docker-compose up
+2. Run Docker Compose
+
 ```
+docker compose up
 
 
 

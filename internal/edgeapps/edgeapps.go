@@ -489,7 +489,7 @@ func GetEdgeAppServices(ID string) []EdgeAppService {
 		// Check if the service is actually running
 		if shouldBeRunning {
 			cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "exec", "-T", serviceID, "echo", "'Service Check'"}
-			cmdResult := utils.Exec(wsPath, "docker-compose", cmdArgs)
+			cmdResult := utils.Exec(wsPath, "docker", append([]string{"compose"}, cmdArgs...))
 			if cmdResult != "" {
 				isRunning = true
 			}
@@ -511,7 +511,7 @@ func RunEdgeApp(ID string) EdgeAppStatus {
 	for _, service := range services {
 
 		cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "start", service.ID}
-		utils.Exec(wsPath, "docker-compose", cmdArgs)
+		utils.Exec(wsPath, "docker", append([]string{"compose"}, cmdArgs...))
 	}
 
 	// Wait for it to settle up before continuing...
@@ -529,7 +529,7 @@ func StopEdgeApp(ID string) EdgeAppStatus {
 	for _, service := range services {
 
 		cmdArgs = []string{"-f", wsPath + "/docker-compose.yml", "stop", service.ID}
-		utils.Exec(wsPath, "docker-compose", cmdArgs)
+		utils.Exec(wsPath, "docker", append([]string{"compose"}, cmdArgs...))
 	}
 
 	// Wait for it to settle up before continuing...

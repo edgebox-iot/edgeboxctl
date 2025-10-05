@@ -67,7 +67,7 @@ run:
 install:
 	@echo "📦 Installing edgeboxctl service (${RELEASE}) for ${GOOS} (${GOARCH})\n"
 	
-	@echo "🚧 Stopping edgeboxctl service if it is running"
+	@echo "�🚧 Stopping edgeboxctl service if it is running"
 	sudo systemctl stop edgeboxctl || true
 
 	@echo "\n🗑️ Removing old edgeboxctl binary and service"
