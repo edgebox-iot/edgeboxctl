@@ -297,6 +297,21 @@ func ExecuteTask(task Task) Task {
 			taskResult := taskStopShell()
 			task.Result = sql.NullString{String: taskResult, Valid: true}
 
+		case "generate_ssh_key":
+			log.Println("Generating SSH Key...")
+			taskResult := taskGenerateSshKey()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
+		case "get_ssh_key":
+			log.Println("Getting SSH Key...")
+			taskResult := taskGetSshKey()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
+		case "revoke_ssh_key":
+			log.Println("Revoking SSH Key...")
+			taskResult := taskRevokeSshKey()
+			task.Result = sql.NullString{String: taskResult, Valid: true}
+
 		case "activate_browser_dev":
 			log.Println("Activating Browser Dev Environment")
 			taskResult := taskActivateBrowserDev()
@@ -1584,4 +1599,119 @@ func taskSetupCloudOptions() {
 func taskStartWs() {
 	fmt.Println("Executing taskStartWs")
 	system.StartWs()
+}
+
+func taskGenerateSshKey() string {
+	fmt.Println("Executing taskGenerateSshKey")
+
+	keyPath := "/root/.ssh/id_ed25519"
+	pubKeyPath := keyPath + ".pub"
+
+	// Check if key already exists
+	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+		fmt.Println("SSH key not found, generating new ED25519 key pair...")
+		utils.Exec("/", "ssh-keygen", []string{"-t", "ed25519", "-f", keyPath, "-N", "", "-q"})
+	} else {
+		fmt.Println("SSH key already exists at " + keyPath)
+	}
+
+	// Read public key
+	pubKeyBytes, err := os.ReadFile(pubKeyPath)
+	if err != nil {
+		fmt.Println("Error reading public key: " + err.Error())
+		return "{\"status\": \"error\", \"message\": \"" + err.Error() + "\"}"
+	}
+	pubKey := string(pubKeyBytes)
+
+	// Read private key
+	privKeyBytes, err := os.ReadFile(keyPath)
+	if err != nil {
+		fmt.Println("Error reading private key: " + err.Error())
+		return "{\"status\": \"error\", \"message\": \"" + err.Error() + "\"}"
+	}
+	privKey := string(privKeyBytes)
+
+	// Also add public key to authorized_keys for root
+	utils.Exec("/", "sh", []string{"-c", "mkdir -p /root/.ssh && chmod 700 /root/.ssh"})
+	authorizedFile := "/root/.ssh/authorized_keys"
+	authorizedBytes, _ := os.ReadFile(authorizedFile)
+	authorizedContent := string(authorizedBytes)
+
+	// Only add if not already present
+	if !strings.Contains(authorizedContent, strings.TrimSpace(pubKey)) {
+		f, err := os.OpenFile(authorizedFile, os.O_APPEND|os.O_WRONLY, 0600)
+		if err == nil {
+			defer f.Close()
+			f.WriteString("\n" + pubKey)
+			fmt.Println("Added SSH public key to authorized_keys")
+		}
+	}
+
+	// Store in options for the API to read
+	utils.WriteOption("SSH_PUBLIC_KEY", strings.TrimSpace(pubKey))
+	utils.WriteOption("SSH_PRIVATE_KEY", privKey)
+	utils.WriteOption("SSH_KEY_FINGERPRINT", strings.TrimSpace(utils.Exec("/", "ssh-keygen", []string{"-lf", pubKeyPath, "-E", "sha256"})))
+
+	fmt.Println("SSH key stored in options")
+
+	return "{\"status\": \"ok\", \"public_key\": \"" + strings.TrimSpace(pubKey) + "\"}"
+}
+
+func taskGetSshKey() string {
+	fmt.Println("Executing taskGetSshKey")
+
+	pubKey := utils.ReadOption("SSH_PUBLIC_KEY")
+	fingerprint := utils.ReadOption("SSH_KEY_FINGERPRINT")
+
+	if pubKey == "" {
+		// Try to read from filesystem directly
+		return taskGenerateSshKey()
+	}
+
+	return "{\"status\": \"ok\", \"public_key\": \"" + pubKey + "\", \"fingerprint\": \"" + fingerprint + "\"}"
+}
+
+func taskRevokeSshKey() string {
+	fmt.Println("Executing taskRevokeSshKey")
+
+	keyPath := "/root/.ssh/id_ed25519"
+	pubKeyPath := keyPath + ".pub"
+
+	// Read current public key before deletion
+	var pubKeyForRemoval string
+	if bytes, err := os.ReadFile(pubKeyPath); err == nil {
+		pubKeyForRemoval = strings.TrimSpace(string(bytes))
+	}
+
+	// Remove SSH key pair from filesystem
+	if err := os.Remove(keyPath); err != nil {
+		fmt.Println("Warning: could not remove private key: " + err.Error())
+	}
+	if err := os.Remove(pubKeyPath); err != nil {
+		fmt.Println("Warning: could not remove public key: " + err.Error())
+	}
+
+	// Remove the public key from authorized_keys if present
+	if pubKeyForRemoval != "" {
+		authorizedFile := "/root/.ssh/authorized_keys"
+		if bytes, err := os.ReadFile(authorizedFile); err == nil {
+			lines := strings.Split(string(bytes), "\n")
+			newLines := []string{}
+			for _, line := range lines {
+				if strings.TrimSpace(line) != pubKeyForRemoval {
+					newLines = append(newLines, line)
+				}
+			}
+			_ = os.WriteFile(authorizedFile, []byte(strings.Join(newLines, "\n")), 0600)
+		}
+	}
+
+	// Remove SSH options from DB
+	utils.WriteOption("SSH_PUBLIC_KEY", "")
+	utils.WriteOption("SSH_PRIVATE_KEY", "")
+	utils.WriteOption("SSH_KEY_FINGERPRINT", "")
+
+	fmt.Println("SSH key pair revoked")
+
+	return "{\"status\": \"ok\", \"message\": \"SSH key pair revoked\"}"
 }
