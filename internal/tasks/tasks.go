@@ -1,16 +1,16 @@
 package tasks
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
-	"time"
-	"os/exec"
-	"strings"
 	"os"
-	"bufio"
+	"os/exec"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/edgebox-iot/edgeboxctl/internal/diagnostics"
 	"github.com/edgebox-iot/edgeboxctl/internal/edgeapps"
@@ -77,7 +77,7 @@ type taskSetEdgeAppOptionsArgs struct {
 }
 
 type taskSetEdgeAppBasicAuthArgs struct {
-	ID string `json:"id"`
+	ID    string        `json:"id"`
 	Login TaskBasicAuth `json:"login"`
 }
 
@@ -99,10 +99,10 @@ type taskEnablePublicDashboardArgs struct {
 }
 
 type taskSetupBackupsArgs struct {
-	Service string `json:"service"`
-	AccessKeyID string `json:"access_key_id"`
-	SecretAccessKey string `json:"secret_access_key"`
-	RepositoryName string `json:"repository_name"`
+	Service            string `json:"service"`
+	AccessKeyID        string `json:"access_key_id"`
+	SecretAccessKey    string `json:"secret_access_key"`
+	RepositoryName     string `json:"repository_name"`
 	RepositoryPassword string `json:"repository_password"`
 }
 
@@ -114,6 +114,9 @@ type taskSetBrowserDevPasswordArgs struct {
 	Password string `json:"password"`
 }
 
+type taskEnableSSHAccessArgs struct {
+	PublicKey string `json:"public_key"`
+}
 
 const STATUS_CREATED int = 0
 const STATUS_EXECUTING int = 1
@@ -274,7 +277,7 @@ func ExecuteTask(task Task) Task {
 			log.Println("Stopping Cloudflare Tunnel...")
 			taskResult := taskStopTunnel()
 			task.Result = sql.NullString{String: taskResult, Valid: true}
-		
+
 		case "disable_tunnel":
 
 			log.Println("Disabling Cloudflare Tunnel...")
@@ -289,7 +292,7 @@ func ExecuteTask(task Task) Task {
 				log.Printf("Error reading arguments or start_shell task: %s", err)
 			} else {
 				taskResult := taskStartShell(args)
-				task.Result = sql.NullString{String: taskResult, Valid: true}												
+				task.Result = sql.NullString{String: taskResult, Valid: true}
 			}
 
 		case "stop_shell":
@@ -450,7 +453,7 @@ func ExecuteTask(task Task) Task {
 
 			log.Println("Updating Edgebox System...")
 			is_updating := utils.ReadOption("UPDATING_SYSTEM")
-			if is_updating == "true"  {
+			if is_updating == "true" {
 				log.Println("Edgebox update was running... Probably system restarted. Finishing update...")
 				utils.WriteOption("UPDATING_SYSTEM", "false")
 				task.Result = sql.NullString{String: "{result: true}", Valid: true}
@@ -484,6 +487,27 @@ func ExecuteTask(task Task) Task {
 			taskResult := taskDeactivateBrowserDev()
 			task.Result = sql.NullString{String: taskResult, Valid: true}
 
+		case "enable_ssh_access":
+			log.Println("Installing dashboard-managed SSH public key...")
+			var args taskEnableSSHAccessArgs
+			if err := json.Unmarshal([]byte(task.Args.String), &args); err != nil {
+				task.Result = sql.NullString{String: "invalid SSH access task arguments", Valid: false}
+			} else if taskResult, err := taskEnableSSHAccess(args); err != nil {
+				log.Printf("Error enabling SSH access: %s", err)
+				task.Result = sql.NullString{String: err.Error(), Valid: false}
+			} else {
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
+		case "disable_ssh_access":
+			log.Println("Removing dashboard-managed SSH public key...")
+			if taskResult, err := taskDisableSSHAccess(); err != nil {
+				log.Printf("Error disabling SSH access: %s", err)
+				task.Result = sql.NullString{String: err.Error(), Valid: false}
+			} else {
+				task.Result = sql.NullString{String: taskResult, Valid: true}
+			}
+
 		}
 
 	}
@@ -507,7 +531,11 @@ func ExecuteTask(task Task) Task {
 
 	} else {
 		fmt.Println("Error executing task with result: " + task.Result.String)
-		_, err = statement.Exec(STATUS_ERROR, "Error", formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
+		errorResult := task.Result.String
+		if errorResult == "" {
+			errorResult = "Error"
+		}
+		_, err = statement.Exec(STATUS_ERROR, errorResult, formatedDatetime, strconv.Itoa(task.ID)) // Execute SQL Statement with Error info
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -535,7 +563,7 @@ func ExecuteSchedules(tick int) {
 		taskGetBrowserDevStatus()
 
 		taskCheckSystemUpdates()
-		
+
 		ip := taskGetSystemIP()
 		log.Println("System IP is: " + ip)
 
@@ -564,7 +592,7 @@ func ExecuteSchedules(tick int) {
 		taskStartWs()
 		log.Println(taskGetEdgeApps())
 		taskUpdateSystemLoggerServices()
-		taskRecoverFromUpdate()		
+		taskRecoverFromUpdate()
 	}
 
 	if tick%5 == 0 {
@@ -599,7 +627,7 @@ func ExecuteSchedules(tick int) {
 				} else {
 
 					log.Println("Last backup is " + fmt.Sprint(secondsSinceLastBackup) + " seconds old (less than 1 hour ago), skipping auto backup...")
-		
+
 				}
 			}
 		} else {
@@ -640,17 +668,17 @@ func taskSetupBackups(args taskSetupBackupsArgs) string {
 	service_found := false
 
 	switch args.Service {
-		case "s3":
-			service_url = "s3.amazonaws.com/"
-			service_found = true
-		case "b2":
-			service_url = ""
-			key_id_name = "B2_ACCOUNT_ID"
-			key_secret_name = "B2_ACCOUNT_KEY"
-			service_found = true
-		case "wasabi":
-			service_found = true
-			service_url = "s3.wasabisys.com/"
+	case "s3":
+		service_url = "s3.amazonaws.com/"
+		service_found = true
+	case "b2":
+		service_url = ""
+		key_id_name = "B2_ACCOUNT_ID"
+		key_secret_name = "B2_ACCOUNT_KEY"
+		service_found = true
+	case "wasabi":
+		service_found = true
+		service_url = "s3.wasabisys.com/"
 	}
 
 	if !service_found {
@@ -663,14 +691,14 @@ func taskSetupBackups(args taskSetupBackupsArgs) string {
 	os.Setenv(key_secret_name, args.SecretAccessKey)
 
 	fmt.Println("Creating restic password file")
-	
+
 	system.CreateBackupsPasswordFile(args.RepositoryPassword)
 
 	fmt.Println("Initializing restic repository")
 	utils.WriteOption("BACKUP_IS_WORKING", "1")
 
 	cmdArgs := []string{"-r", args.Service + ":" + service_url + args.RepositoryName + ":" + repo_location, "init", "--password-file", utils.GetPath(utils.BackupPasswordFileLocation), "--verbose=3"}
-	
+
 	result := utils.ExecAndStream(repo_location, "restic", cmdArgs)
 
 	utils.WriteOption("BACKUP_IS_WORKING", "0")
@@ -699,9 +727,9 @@ func taskSetupBackups(args taskSetupBackupsArgs) string {
 
 	// Populate Stats right away
 	taskGetBackupStatus()
-	
+
 	return "{\"status\": \"ok\"}"
-	
+
 }
 
 func taskRemoveBackups() string {
@@ -710,12 +738,12 @@ func taskRemoveBackups() string {
 
 	// ...	This deletes the restic repository
 	// cmdArgs := []string{"-r", "s3:https://s3.amazonaws.com/edgebox-backups:/home/system/components/apps/", "forget", "latest", "--password-file", utils.GetPath(utils.BackupPasswordFileLocation), "--verbose=3"}
-	
+
 	utils.WriteOption("BACKUP_STATUS", "")
 	utils.WriteOption("BACKUP_IS_WORKING", "0")
 
 	return "{\"status\": \"ok\"}"
-	
+
 }
 
 func taskBackup() string {
@@ -735,14 +763,14 @@ func taskBackup() string {
 	service_found := false
 
 	switch backup_service {
-		case "s3":
-			service_found = true
-		case "b2":
-			key_id_name = "B2_ACCOUNT_ID"
-			key_secret_name = "B2_ACCOUNT_KEY"
-			service_found = true
-		case "wasabi":
-			service_found = true
+	case "s3":
+		service_found = true
+	case "b2":
+		key_id_name = "B2_ACCOUNT_ID"
+		key_secret_name = "B2_ACCOUNT_KEY"
+		service_found = true
+	case "wasabi":
+		service_found = true
 	}
 
 	if !service_found {
@@ -755,7 +783,6 @@ func taskBackup() string {
 	os.Setenv(key_id_name, backup_repository_access_key_id)
 	fmt.Println(key_secret_name)
 	os.Setenv(key_secret_name, backup_repository_secret_access_key)
-
 
 	utils.WriteOption("BACKUP_IS_WORKING", "1")
 
@@ -778,7 +805,7 @@ func taskBackup() string {
 	utils.WriteOption("BACKUP_STATUS", "working")
 	taskGetBackupStatus()
 	return "{\"status\": \"ok\"}"
-	
+
 }
 
 func taskRestoreBackup() string {
@@ -798,14 +825,14 @@ func taskRestoreBackup() string {
 	service_found := false
 
 	switch backup_service {
-		case "s3":
-			service_found = true
-		case "b2":
-			key_id_name = "B2_ACCOUNT_ID"
-			key_secret_name = "B2_ACCOUNT_KEY"
-			service_found = true
-		case "wasabi":
-			service_found = true
+	case "s3":
+		service_found = true
+	case "b2":
+		key_id_name = "B2_ACCOUNT_ID"
+		key_secret_name = "B2_ACCOUNT_KEY"
+		service_found = true
+	case "wasabi":
+		service_found = true
 	}
 
 	if !service_found {
@@ -819,7 +846,6 @@ func taskRestoreBackup() string {
 	fmt.Println(key_secret_name)
 	os.Setenv(key_secret_name, backup_repository_secret_access_key)
 
-
 	utils.WriteOption("BACKUP_IS_WORKING", "1")
 
 	fmt.Println("Stopping All EdgeApps")
@@ -828,8 +854,8 @@ func taskRestoreBackup() string {
 
 	// Copy all files in /home/system/components/apps/ to a backup folder
 	fmt.Println("Copying all files in /home/system/components/apps/ to a backup folder")
-	os.MkdirAll(utils.GetPath(utils.EdgeAppsBackupPath + "temp/"), 0777)
-	system.CopyDir(utils.GetPath(utils.EdgeAppsPath), utils.GetPath(utils.EdgeAppsBackupPath + "temp/"))
+	os.MkdirAll(utils.GetPath(utils.EdgeAppsBackupPath+"temp/"), 0777)
+	system.CopyDir(utils.GetPath(utils.EdgeAppsPath), utils.GetPath(utils.EdgeAppsBackupPath+"temp/"))
 
 	fmt.Println("Removing all files in /home/system/components/apps/")
 	os.RemoveAll(utils.GetPath(utils.EdgeAppsPath))
@@ -852,7 +878,7 @@ func taskRestoreBackup() string {
 	if strings.Contains(result, "Fatal:") {
 		// Copy all files from backup folder to /home/system/components/apps/
 		os.MkdirAll(utils.GetPath(utils.EdgeAppsPath), 0777)
-		system.CopyDir(utils.GetPath(utils.EdgeAppsBackupPath + "temp/"), utils.GetPath(utils.EdgeAppsPath))
+		system.CopyDir(utils.GetPath(utils.EdgeAppsBackupPath+"temp/"), utils.GetPath(utils.EdgeAppsPath))
 
 		fmt.Println("Error restoring backup: ")
 		utils.WriteOption("BACKUP_STATUS", "error")
@@ -863,7 +889,7 @@ func taskRestoreBackup() string {
 	utils.WriteOption("BACKUP_STATUS", "working")
 	taskGetBackupStatus()
 	return "{\"status\": \"ok\"}"
-	
+
 }
 
 func taskAutoBackup() string {
@@ -876,7 +902,7 @@ func taskAutoBackup() string {
 		return taskBackup()
 	} else {
 		fmt.Println("Backup status is not working... skipping")
-		return "{\"status\": \"skipped\"}"		
+		return "{\"status\": \"skipped\"}"
 	}
 }
 
@@ -897,14 +923,14 @@ func taskGetBackupStatus() string {
 	service_found := false
 
 	switch backup_service {
-		case "s3":
-			service_found = true
-		case "b2":
-			key_id_name = "B2_ACCOUNT_ID"
-			key_secret_name = "B2_ACCOUNT_KEY"
-			service_found = true
-		case "wasabi":
-			service_found = true
+	case "s3":
+		service_found = true
+	case "b2":
+		key_id_name = "B2_ACCOUNT_ID"
+		key_secret_name = "B2_ACCOUNT_KEY"
+		service_found = true
+	case "wasabi":
+		service_found = true
 	}
 
 	if !service_found {
@@ -921,12 +947,12 @@ func taskGetBackupStatus() string {
 	utils.WriteOption("BACKUP_STATS", utils.ExecAndStream(backup_repository_location, "restic", cmdArgs))
 
 	return "{\"status\": \"ok\"}"
-	
+
 }
 
 func taskSetupTunnel(args taskSetupTunnelArgs) string {
 	fmt.Println("Executing taskSetupTunnel")
-	wsPath := utils.GetPath(utils.WsPath)	
+	wsPath := utils.GetPath(utils.WsPath)
 
 	// Stop a the service if it is running
 	system.StopService("cloudflared")
@@ -995,14 +1021,14 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 		system.CreateTunnel("/home/system/.cloudflared/config.yml")
 
 		fmt.Println("Creating DNS Routes for @ and *.")
-		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f" ,"edgebox", "*." + args.DomainName)
+		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f", "edgebox", "*."+args.DomainName)
 		cmd.Start()
 		err = cmd.Wait()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f" ,"edgebox", args.DomainName)
+		cmd = exec.Command("cloudflared", "tunnel", "route", "dns", "-f", "edgebox", args.DomainName)
 		cmd.Start()
 		err = cmd.Wait()
 		if err != nil {
@@ -1032,23 +1058,23 @@ func taskSetupTunnel(args taskSetupTunnelArgs) string {
 		fmt.Println("Finished running async")
 	}()
 
-    return "{\"url\": \"" + url + "\"}"
+	return "{\"url\": \"" + url + "\"}"
 }
 
 func taskStartTunnel() string {
-    fmt.Println("Executing taskStartTunnel")
-    
-    // Read tunnel status to check if cloudflare is configured
-    tunnelStatus := utils.ReadOption("TUNNEL_STATUS")
+	fmt.Println("Executing taskStartTunnel")
+
+	// Read tunnel status to check if cloudflare is configured
+	tunnelStatus := utils.ReadOption("TUNNEL_STATUS")
 	if tunnelStatus != "" {
 		// Only start cloudflared if we have a tunnel configured
-        system.StartService("cloudflared")
-        domainName := utils.ReadOption("DOMAIN_NAME")
-        status := "{\"status\": \"connected\", \"domain\": \"" + domainName + "\"}"
-        utils.WriteOption("TUNNEL_STATUS", status)
+		system.StartService("cloudflared")
+		domainName := utils.ReadOption("DOMAIN_NAME")
+		status := "{\"status\": \"connected\", \"domain\": \"" + domainName + "\"}"
+		utils.WriteOption("TUNNEL_STATUS", status)
 	}
-    
-    return "{\"status\": \"ok\"}"
+
+	return "{\"status\": \"ok\"}"
 }
 
 func taskStopTunnel() string {
@@ -1110,7 +1136,7 @@ func taskStartShell(args taskStartShellArgs) string {
 
 	go func() {
 		fmt.Println("Running shell async")
-		
+
 		// cmd.Wait()
 
 		// Keep retrying to calculate timeout to know when to kill the process
@@ -1152,7 +1178,7 @@ func taskGetBrowserDevStatus() string {
 		utils.GetPath(utils.WsPath),
 		"sh",
 		[]string{"-c", "systemctl --quiet is-active code-server@root && echo 'active' || echo 'inactive'"},
-	)	
+	)
 	if browserDevStatus == "active" {
 		fmt.Println("Browser Dev Environment is running")
 		utils.WriteOption("BROWSERDEV_STATUS", "running")
@@ -1211,7 +1237,7 @@ func taskDeactivateBrowserDev() string {
 	// Remove the run file
 	os.Remove(utils.GetPath(utils.BrowserDevProxyPath) + ".run")
 	system.StartWs()
-	
+
 	utils.Exec(wsPath, "systemctl", []string{"stop", "code-server@root"})
 	utils.WriteOption("BROWSERDEV_STATUS", "not_running")
 
@@ -1302,7 +1328,6 @@ func taskSetEdgeAppOptions(args taskSetEdgeAppOptionsArgs) string {
 	// Id is the edgeapp id
 	appID := args.ID
 
-
 	// Open the file to write the options,
 	// it is an env file in /home/system/components/apps/<app_id>/edgeapp.env
 
@@ -1333,7 +1358,7 @@ func taskSetEdgeAppOptions(args taskSetEdgeAppOptionsArgs) string {
 			log.Printf("Error writing option to edgeapp.env file: %s", err)
 		}
 	}
-	
+
 	// Close the file
 	err = edgeappEnvFile.Close()
 	if err != nil {
@@ -1352,7 +1377,6 @@ func taskSetEdgeAppOptions(args taskSetEdgeAppOptionsArgs) string {
 func taskSetEdgeAppBasicAuth(args taskSetEdgeAppBasicAuthArgs) string {
 	// Id is the edgeapp id
 	appID := args.ID
-
 
 	// Open the file to write the options,
 	// it is an env file in /home/system/components/apps/<app_id>/auth.env
@@ -1381,7 +1405,7 @@ func taskSetEdgeAppBasicAuth(args taskSetEdgeAppBasicAuthArgs) string {
 	if err != nil {
 		log.Printf("Error writing credentials to auth.env file: %s", err)
 	}
-	
+
 	// Close the file
 	err = edgeappAuthEnvFile.Close()
 	if err != nil {
@@ -1486,7 +1510,7 @@ func taskRecoverFromUpdate() string {
 			filteredTasks = append(filteredTasks, task)
 		}
 	}
-	
+
 	// If tasks is not empty, Get the last task
 	if len(filteredTasks) > 0 {
 		lastTask := filteredTasks[len(filteredTasks)-1]
@@ -1527,7 +1551,7 @@ func taskUpdateSystemLoggerServices() string {
 
 	input = append(input, "edgeboxctl")
 	input = append(input, "tunnel")
-	
+
 	// Run the system logger
 	system.UpdateSystemLoggerServices(input)
 

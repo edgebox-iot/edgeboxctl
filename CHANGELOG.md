@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0] - 23-09-2026
+
+* Added dashboard-managed SSH public-key access.
+* Validates ED25519 public keys and reports their SHA256 fingerprints.
+* Atomically installs or removes only the marked Edgebox key while preserving all other authorized keys.
+* Never generates, reads, stores, logs, or returns SSH private keys.
+
 ## [1.3.2] - 08-12-2024
 
 * Fix to Browser Dev feature:
@@ -20,4 +27,3 @@
 ### Missing Past Releases
 
 Release notes for past versions are not available in this file. Please refer to the [GitHub releases](https://hithub.com/edgebox-iot/edgeboxctl/releases) for more information. Feel free to contribute to this file by adding missing release notes.
-
