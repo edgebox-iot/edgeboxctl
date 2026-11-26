@@ -142,6 +142,7 @@ func UpdateSystemLoggerServices(services []string) {
 }
 
 // StartWs: Starts the webserver service for Edgeapps
+// StartWs : Starts the WS environment (renders and brings up all modules)
 func StartWs() {
 	wsPath := utils.GetPath(utils.WsPath)
 	fmt.Println("Starting WS")
