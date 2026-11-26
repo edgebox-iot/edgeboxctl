@@ -30,7 +30,7 @@ func assertGetDevices(devices []Device, t *testing.T) {
 	t.Log("Looking for a mmcblk0, sda, vda or nvme device")
 	for _, device := range devices {
 
-		if device.ID == "mmcblk0" || device.ID == "sda" || device.ID == "vda" || strings.HasPrefix(device.ID, "nvme") {
+		if device.ID == "mmcblk0" || device.ID == "sda" || device.ID == "vda" || strings.HasPrefix(string(device.ID), "nvme") {
 			t.Log("Found target device", device.ID)
 			foundDevice = true
 		}
