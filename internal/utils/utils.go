@@ -91,7 +91,10 @@ func GetSQLiteDbConnectionDetails() string {
 		log.Fatal("Error loading .env file")
 	}
 
-	return apiEnv["SQLITE_DATABASE"] // Will read from api project edgebox.env file
+	// The API (running in its own container) writes to this same database.
+	// A busy timeout lets edgeboxctl wait for the lock instead of failing
+	// instantly when the API is mid-write.
+	return apiEnv["SQLITE_DATABASE"] + "?_busy_timeout=5000" // Will read from api project edgebox.env file
 
 }
 
