@@ -3,6 +3,7 @@
 package storage
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -26,10 +27,10 @@ func assertGetDevices(devices []Device, t *testing.T) {
 
 	foundDevice := false
 
-	t.Log("Looking for a mmcblk0, sda or dva device")
+	t.Log("Looking for a mmcblk0, sda, vda or nvme device")
 	for _, device := range devices {
 
-		if device.ID == "mmcblk0" || device.ID == "sda" || device.ID == "vda" {
+		if device.ID == "mmcblk0" || device.ID == "sda" || device.ID == "vda" || strings.HasPrefix(device.ID, "nvme") {
 			t.Log("Found target device", device.ID)
 			foundDevice = true
 		}
@@ -37,7 +38,7 @@ func assertGetDevices(devices []Device, t *testing.T) {
 	}
 
 	if !foundDevice {
-		t.Log("Expected to find device mmcblk0, sda or dva but did not. Devices:", devices)
+		t.Log("Expected to find device mmcblk0, sda, vda or nvme but did not. Devices:", devices)
 		t.Fail()
 	}
 }
