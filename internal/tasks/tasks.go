@@ -588,8 +588,13 @@ func ExecuteSchedules(tick int) {
 		uptime := taskGetSystemUptime()
 		log.Println("Uptime is " + uptime + " seconds (" + system.GetUptimeFormatted() + ")")
 
-		log.Println(taskGetStorageDevices())
-		taskStartWs()
+		// Run the WS bring-up asynchronously: a full "./ws -b" can take a
+		// long time (image builds, busy docker daemon) and must never block
+		// the task loop from fetching queued dashboard tasks.
+		go func() {
+			taskStartWs()
+			log.Println("WS start finished (async)")
+		}()
 		log.Println(taskGetEdgeApps())
 		taskUpdateSystemLoggerServices()
 		taskRecoverFromUpdate()
